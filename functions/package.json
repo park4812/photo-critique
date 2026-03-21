@@ -1,0 +1,23 @@
+{
+  "name": "photo-critique-functions",
+  "description": "Firebase Cloud Functions for Photo Critique AI evaluation",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0",
+    "openai": "^4.70.0",
+    "sharp": "^0.33.0"
+  },
+  "private": true
+}
