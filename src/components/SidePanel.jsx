@@ -366,6 +366,37 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
                     <div className="technical-note">{photo.critique.technicalNotes}</div>
                   </div>
                 )}
+                {photo.references && photo.references.length > 0 && (
+                  <div className="critique-section">
+                    <div className="section-title">참고 작가 & 작품</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {photo.references.map((ref, i) => (
+                        <div key={i} style={{
+                          padding: '10px 12px',
+                          background: 'rgba(200, 168, 110, 0.06)',
+                          border: '1px solid rgba(200, 168, 110, 0.15)',
+                          borderRadius: '8px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                              {ref.photographer}
+                            </span>
+                            {ref.work && (
+                              <span style={{ fontSize: '11px', color: 'var(--accent)' }}>
+                                {ref.work}
+                              </span>
+                            )}
+                          </div>
+                          {ref.reason && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                              {ref.reason}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {photo.aiModel && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right', marginTop: '8px' }}>
                     평가: {photo.aiModel === 'multi-ai-debate' ? 'Claude + GPT-4 + Gemini 토론 합의' : photo.aiModel}
