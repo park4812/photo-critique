@@ -42,10 +42,9 @@ function resizeImage(file, maxWidth = 1080) {
  *
  * props.useFirebase: true면 Firebase에 직접 업로드, false면 로컬 샘플 모드
  */
-export default function UploadModal({ onUpload, onClose, useFirebase = false }) {
+export default function UploadModal({ onUpload, onClose, useFirebase = false, uploaderName: fixedUploaderName = '' }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [uploaderName, setUploaderName] = useState('');
   const [category, setCategory] = useState(categories[1]);
   const [tagsInput, setTagsInput] = useState('');
   const [preview, setPreview] = useState(null);
@@ -84,7 +83,7 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false }) 
         const photoData = {
           title: title.trim(),
           description: description.trim(),
-          uploaderName: uploaderName.trim() || '익명',
+          uploaderName: fixedUploaderName || '익명',
           category,
           location: '',
           date: new Date().toISOString().split('T')[0],
@@ -179,8 +178,8 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false }) 
 
         <div className="form-group">
           <label className="form-label">업로더</label>
-          <input className="form-input" placeholder="이름"
-            value={uploaderName} onChange={e => setUploaderName(e.target.value)} />
+          <input className="form-input" value={fixedUploaderName || '익명'} disabled
+            style={{ opacity: 0.7, cursor: 'not-allowed' }} />
         </div>
 
         <div className="form-group">

@@ -1,16 +1,18 @@
 import { useState, useMemo, useEffect } from 'react';
 import { categories } from './sampleData';
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Gallery from './components/Gallery';
 import SidePanel from './components/SidePanel';
 import UploadModal from './components/UploadModal';
 import FilterBar from './components/FilterBar';
-import AdminLogin from './components/AdminLogin';
+import AuthModal from './components/AuthModal';
 import './App.css';
 
 // Firebase is configured
 const USE_FIREBASE = true;
 
-// Admin password hash (SHA-256 of "283456")
+// Admin password for admin-only features (delete etc.)
 const ADMIN_PASSWORD = '283456';
 
 function App() {
@@ -22,7 +24,18 @@ function App() {
   const [sortBy, setSortBy] = useState("date");
   const [scoreFilter, setScoreFilter] = useState([0, 10]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Firebase Auth 상태 감시
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setAuthLoading(false);
+    });
+    return () => unsubAuth();
+  }, []);
 
   // Firebase 실시간 구독: Firestore에서 사진 목록을 실시간으로 불러옴
   useEffect(() => {
@@ -32,7 +45,6 @@ function App() {
       const { subscribeToPhotos } = await import('./services/firebaseService');
       unsubscribe = subscribeToPhotos((firebasePhotos) => {
         setPhotos(firebasePhotos);
-        // 선택된 사진도 실시간 업데이트
         setSelectedPhoto(prev => {
           if (!prev) return prev;
           const updated = firebasePhotos.find(p => p.id === prev.id);
@@ -68,8 +80,6 @@ function App() {
   };
 
   const handleUpload = (newPhoto) => {
-    // Firebase 모드: onSnapshot이 자동으로 추가하므로 로컬 state에 추가하지 않음
-    // 로컬 모드: 직접 state에 추가
     if (!USE_FIREBASE) {
       setPhotos(prev => [newPhoto, ...prev]);
     }
@@ -82,7 +92,6 @@ function App() {
       handleClosePanel();
     }
     if (USE_FIREBASE) {
-      // Firebase 모드: Firestore에서 삭제 → onSnapshot이 자동으로 UI 업데이트
       try {
         const { deletePhoto } = await import('./services/firebaseService');
         await deletePhoto(photoId);
@@ -91,14 +100,12 @@ function App() {
         alert('삭제 실패: ' + err.message);
       }
     } else {
-      // 로컬 모드: state에서 직접 제거
       setPhotos(prev => prev.filter(p => p.id !== photoId));
     }
   };
 
   const handleAddComment = async (photoId, comment) => {
     if (USE_FIREBASE) {
-      // Firebase 모드: Firestore에 댓글 저장
       try {
         const { addComment } = await import('./services/firebaseService');
         await addComment(photoId, comment);
@@ -106,7 +113,6 @@ function App() {
         console.error('Comment failed:', err);
       }
     }
-    // 로컬 state에도 즉시 반영 (Firebase 모드에서도 빠른 피드백을 위해)
     setPhotos(prev => prev.map(p => {
       if (p.id === photoId) {
         return { ...p, comments: [...(p.comments || []), comment] };
@@ -133,17 +139,32 @@ function App() {
     await debateEvaluatePhoto(photoId);
   };
 
-  const handleLogin = (password) => {
-    if (password === ADMIN_PASSWORD) {
-      setIsAdmin(true);
-      setShowLogin(false);
-      return true;
-    }
-    return false;
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    setShowAuth(false);
   };
 
-  const handleLogout = () => {
-    setIsAdmin(false);
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setCurrentUser(null);
+      setIsAdmin(false);
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
+  const handleAdminToggle = () => {
+    if (isAdmin) {
+      setIsAdmin(false);
+    } else {
+      const pw = prompt('관리자 비밀번호를 입력하세요');
+      if (pw === ADMIN_PASSWORD) {
+        setIsAdmin(true);
+      } else if (pw !== null) {
+        alert('비밀번호가 틀렸습니다');
+      }
+    }
   };
 
   return (
@@ -154,19 +175,23 @@ function App() {
           <span className="app-subtitle">사진 크리틱 & 리뷰</span>
         </div>
         <div className="header-right">
-          {isAdmin ? (
+          {authLoading ? null : currentUser ? (
             <>
-              <span className="admin-badge">Admin</span>
+              <span className="user-name">{currentUser.displayName || currentUser.email}</span>
+              {isAdmin && <span className="admin-badge">Admin</span>}
               <button className="upload-btn" onClick={() => setUploadOpen(true)}>
-                + 사진 업로드
+                + 업로드
+              </button>
+              <button className="header-icon-btn" onClick={handleAdminToggle} title={isAdmin ? '관리자 모드 해제' : '관리자 모드'}>
+                {isAdmin ? '🔓' : '🔒'}
               </button>
               <button className="logout-btn" onClick={handleLogout}>
                 로그아웃
               </button>
             </>
           ) : (
-            <button className="login-btn" onClick={() => setShowLogin(true)}>
-              관리자 로그인
+            <button className="login-btn" onClick={() => setShowAuth(true)}>
+              로그인 / 회원가입
             </button>
           )}
         </div>
@@ -201,18 +226,19 @@ function App() {
         onDeletePhoto={handleDeletePhoto}
       />
 
-      {uploadOpen && isAdmin && (
+      {uploadOpen && currentUser && (
         <UploadModal
           onUpload={handleUpload}
           onClose={() => setUploadOpen(false)}
           useFirebase={USE_FIREBASE}
+          uploaderName={currentUser.displayName || currentUser.email}
         />
       )}
 
-      {showLogin && (
-        <AdminLogin
-          onLogin={handleLogin}
-          onClose={() => setShowLogin(false)}
+      {showAuth && (
+        <AuthModal
+          onAuthSuccess={handleAuthSuccess}
+          onClose={() => setShowAuth(false)}
         />
       )}
     </div>
