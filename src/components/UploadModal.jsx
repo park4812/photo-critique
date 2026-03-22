@@ -1,13 +1,29 @@
 import { useState, useRef } from 'react';
+import heic2any from 'heic2any';
 
-const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+const HEIC_TYPES = ['image/heic', 'image/heif'];
+const HEIC_EXTENSIONS = ['.heic', '.heif'];
+
+/**
+ * HEIC/HEIF 등 비표준 포맷을 JPEG Blob으로 변환
+ * 일반 이미지(jpg, png, webp, bmp, gif, tiff 등)는 그대로 반환
+ */
+async function ensureJpegCompatible(file) {
+  const name = file.name.toLowerCase();
+  const isHeic = HEIC_TYPES.includes(file.type) || HEIC_EXTENSIONS.some(ext => name.endsWith(ext));
+
+  if (isHeic) {
+    const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+    // heic2any can return array for multi-frame, take first
+    const result = Array.isArray(blob) ? blob[0] : blob;
+    return new File([result], file.name.replace(/\.heic|\.heif/i, '.jpg'), { type: 'image/jpeg' });
+  }
+
+  return file;
+}
 
 function resizeImage(file, maxWidth = 2048) {
   return new Promise((resolve, reject) => {
-    if (file.size > MAX_FILE_SIZE) {
-      reject(new Error(`파일 크기가 너무 큽니다 (${(file.size / 1024 / 1024).toFixed(1)}MB). 최대 30MB까지 가능합니다.`));
-      return;
-    }
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'));
     reader.onload = (e) => {
@@ -67,18 +83,35 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
   const fileRef = useRef(null);
 
   const [fileError, setFileError] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFile = async (file) => {
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file) return;
+
+    // 이미지 타입 또는 HEIC 확장자 확인
+    const name = file.name.toLowerCase();
+    const isImage = file.type.startsWith('image/');
+    const isHeic = HEIC_EXTENSIONS.some(ext => name.endsWith(ext));
+    if (!isImage && !isHeic) return;
+
     setFileError('');
+    setIsProcessing(true);
+
     try {
-      const resized = await resizeImage(file);
+      // 1단계: HEIC 등 비표준 포맷 → JPEG 변환
+      const compatible = await ensureJpegCompatible(file);
+
+      // 2단계: 리사이즈 + 압축
+      const resized = await resizeImage(compatible);
       setPreview(resized.dataUrl);
       setImageData(resized);
     } catch (err) {
+      console.error('Image processing error:', err);
       setFileError(err.message);
       setPreview(null);
       setImageData(null);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -175,20 +208,29 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
             onDragOver={e => e.preventDefault()}
             onDrop={handleDrop}
           >
-            {preview ? (
+            {isProcessing ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{
+                  width: '24px', height: '24px', border: '2px solid var(--accent)',
+                  borderTopColor: 'transparent', borderRadius: '50%',
+                  animation: 'spin 1s linear infinite', margin: '0 auto 8px'
+                }} />
+                <div className="upload-dropzone-text">이미지 변환 중...</div>
+              </div>
+            ) : preview ? (
               <div className="upload-preview">
                 <img src={preview} alt="preview" />
               </div>
             ) : (
               <>
                 <div className="upload-dropzone-text">클릭하거나 파일을 드래그하세요</div>
-                <div className="upload-dropzone-hint">최대 2048px로 리사이즈 (30MB 이하)</div>
+                <div className="upload-dropzone-hint">JPG, PNG, WebP, HEIC 등 (자동 변환)</div>
               </>
             )}
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               onChange={e => handleFile(e.target.files[0])}
             />
           </div>
@@ -261,7 +303,7 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
           <button
             className="modal-btn modal-btn-primary"
             onClick={handleSubmit}
-            disabled={!title.trim() || !preview || isUploading}
+            disabled={!title.trim() || !preview || isUploading || isProcessing}
           >
             {isUploading ? '업로드 중...' : '업로드'}
           </button>
