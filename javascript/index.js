@@ -55,15 +55,16 @@ const EVAL_PROMPT = `당신은 전문 사진 크리틱입니다.
       "reason": "이 사진과의 연관성 또는 참고 포인트"
     }
   ],
-  "suggestedCategory": "거리/상점 외관",
-  "suggestedTags": ["야간", "스트릿"]
+  "aiTags": ["스트릿", "야간", "도시"]
 }
 
 references에는 이 사진의 스타일, 구도, 주제와 관련된 참고할 만한 유명 사진작가 2~3명을 추천해주세요.
-도쿄 야간 거리 사진이므로 일본 사진작가도 적극적으로 포함하되, 해외 작가도 관련 있으면 포함하세요.
+일본 사진작가도 적극적으로 포함하되, 해외 작가도 관련 있으면 포함하세요.
 각 작가의 대표 작품이나 시리즈와 함께, 이 사진을 발전시키는 데 어떤 점을 참고하면 좋을지 간단히 설명해주세요.
 
-카테고리는 다음 중 하나: 거리/상점 외관, 골목/거리 풍경, 정물/디테일, 음식, 실내/다큐멘터리
+aiTags는 이 사진의 장르, 주제, 분위기, 스타일을 설명하는 한국어 태그 2~4개를 자유롭게 생성하세요.
+미리 정해진 카테고리는 없습니다. 사진을 보고 가장 적절한 태그를 자유롭게 만들어주세요.
+예시: 인물/뷰티, 에디토리얼, 스트릿, 야간, 네온, 골목길, 음식, 건축, 풍경, 흑백, 미니멀, 다큐멘터리, 정물, 실내, 감성, 빈티지 등
 한국어로 작성하세요.`;
 
 function buildDebatePrompt(evaluations) {
@@ -128,14 +129,14 @@ ${JSON.stringify(evaluations.gemini, null, 2)}
       "reason": "이 사진과의 연관성 또는 참고 포인트"
     }
   ],
-  "suggestedCategory": "거리/상점 외관",
-  "suggestedTags": ["야간", "스트릿"]
+  "aiTags": ["스트릿", "야간", "도시"]
 }
 
 references에는 3인의 토론을 종합하여, 이 사진의 스타일과 관련된 참고할 만한 사진작가 2~3명을 추천해주세요.
 토론은 3~6개 메시지로 진행하되, 점수 차이가 큰 항목 위주로 논의하세요.
 각 크리틱은 자신의 원래 평가 근거를 설명하고, 다른 의견에 동의/반박합니다.
 최종 점수는 단순 평균이 아닌 토론을 통해 합의된 점수여야 합니다.
+aiTags는 사진의 장르, 주제, 분위기를 설명하는 한국어 태그 2~4개를 자유롭게 생성하세요.
 한국어로 작성하세요.`;
 }
 
@@ -244,8 +245,8 @@ exports.autoEvaluatePhoto = onObjectFinalized(
         totalScore: result.totalScore,
         critique: result.critique,
         references: result.references || [],
-        suggestedCategory: result.suggestedCategory || null,
-        suggestedTags: result.suggestedTags || [],
+        aiTags: result.aiTags || [],
+        category: (result.aiTags && result.aiTags[0]) || '미분류',
         aiEvaluated: true,
         aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
         aiModel: "claude-sonnet-4-20250514",
@@ -327,8 +328,8 @@ exports.debateEvaluatePhoto = onCall(
         totalScore: finalTotal,
         critique: debateResult.finalCritique,
         references: debateResult.references || [],
-        suggestedCategory: debateResult.suggestedCategory || null,
-        suggestedTags: debateResult.suggestedTags || [],
+        aiTags: debateResult.aiTags || [],
+        category: (debateResult.aiTags && debateResult.aiTags[0]) || '미분류',
         aiEvaluated: true,
         aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
         aiModel: "multi-ai-debate",
@@ -381,6 +382,8 @@ exports.reEvaluatePhoto = onCall(
       totalScore: result.totalScore,
       critique: result.critique,
       references: result.references || [],
+      aiTags: result.aiTags || [],
+      category: (result.aiTags && result.aiTags[0]) || '미분류',
       aiEvaluated: true,
       aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
       aiModel: "claude-sonnet-4-20250514",
@@ -453,3 +456,116 @@ function parseDebateResponse(text) {
   if (!jsonMatch) throw new Error("Failed to parse debate response as JSON");
   return JSON.parse(jsonMatch[0]);
 }
+
+// ============================================================
+// 5. Re-tag all photos (admin batch operation)
+// ============================================================
+exports.reTagAllPhotos = onCall(
+  {
+    region: "asia-northeast1",
+    secrets: [anthropicKey],
+    memory: "512MiB",
+    timeoutSeconds: 540,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const photosSnap = await db.collection('photos').get();
+    const results = { success: 0, failed: 0, total: photosSnap.size };
+
+    for (const photoDoc of photosSnap.docs) {
+      try {
+        const [files] = await bucket.getFiles({ prefix: `photos/${photoDoc.id}/original` });
+        if (files.length === 0) { results.failed++; continue; }
+
+        const base64 = await getResizedBase64(files[0].name);
+        const result = await callClaude(base64, anthropicKey.value());
+
+        await db.doc(`photos/${photoDoc.id}`).update({
+          scores: result.scores,
+          totalScore: result.totalScore,
+          critique: result.critique,
+          references: result.references || [],
+          aiTags: result.aiTags || [],
+          category: (result.aiTags && result.aiTags[0]) || '미분류',
+          aiEvaluated: true,
+          aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          aiModel: "claude-sonnet-4-20250514",
+          aiStatus: "done",
+        });
+        results.success++;
+      } catch (err) {
+        console.error(`Failed to re-tag ${photoDoc.id}:`, err);
+        results.failed++;
+      }
+    }
+
+    return results;
+  }
+);
+
+// ============================================================
+// 6. Admin: List registered users
+// ============================================================
+exports.listUsers = onCall(
+  {
+    region: "asia-northeast1",
+  },
+  async (request) => {
+    // Verify caller is authenticated
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    try {
+      const listResult = await admin.auth().listUsers(1000);
+      const users = listResult.users.map(user => ({
+        uid: user.uid,
+        email: user.email || '',
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || '',
+        createdAt: user.metadata.creationTime,
+        lastSignIn: user.metadata.lastSignInTime,
+        disabled: user.disabled,
+      }));
+      return { users };
+    } catch (error) {
+      console.error("Failed to list users:", error);
+      throw new HttpsError("internal", error.message);
+    }
+  }
+);
+
+// ============================================================
+// 6. Admin: Delete a user
+// ============================================================
+exports.deleteAuthUser = onCall(
+  {
+    region: "asia-northeast1",
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { uid } = request.data;
+    if (!uid) {
+      throw new HttpsError("invalid-argument", "uid is required");
+    }
+
+    // Prevent self-deletion
+    if (uid === request.auth.uid) {
+      throw new HttpsError("failed-precondition", "자기 자신은 삭제할 수 없습니다.");
+    }
+
+    try {
+      await admin.auth().deleteUser(uid);
+      return { success: true, deletedUid: uid };
+    } catch (error) {
+      console.error(`Failed to delete user ${uid}:`, error);
+      throw new HttpsError("internal", error.message);
+    }
+  }
+);
