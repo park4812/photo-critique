@@ -51,6 +51,12 @@ body {
 .app-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
 .app-subtitle { font-size: 13px; color: var(--text-secondary); }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .upload-btn {
   padding: 8px 20px;
   background: var(--accent);
@@ -63,6 +69,41 @@ body {
   transition: background 0.2s;
 }
 .upload-btn:hover { background: var(--accent-dim); }
+
+.login-btn {
+  padding: 8px 20px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.login-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.logout-btn {
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.logout-btn:hover { border-color: #f87171; color: #f87171; }
+
+.admin-badge {
+  padding: 4px 10px;
+  background: rgba(200, 168, 110, 0.15);
+  color: var(--accent);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
 
 /* ===== Filter Bar ===== */
 .filter-bar {
@@ -619,6 +660,67 @@ body {
   border: 1px solid var(--border-light);
 }
 .modal-btn-secondary:hover { background: var(--bg-hover); }
+
+/* ===== Empty Gallery ===== */
+.empty-gallery {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 32px;
+  text-align: center;
+}
+.empty-icon { font-size: 64px; margin-bottom: 20px; opacity: 0.4; }
+.empty-title { font-size: 18px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+.empty-subtitle { font-size: 14px; color: var(--text-muted); max-width: 360px; }
+
+/* ===== Delete Button on Card ===== */
+.delete-btn-card {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(248, 113, 113, 0.9);
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-card:hover .delete-btn-card { opacity: 1; }
+.delete-btn-card:hover { transform: scale(1.15); background: #f87171; }
+
+/* ===== Panel Delete Button ===== */
+.panel-delete-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(248, 113, 113, 0.1);
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.panel-delete-btn:hover { background: rgba(248, 113, 113, 0.25); }
+
+/* ===== Admin Login Modal Shake ===== */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+.shake { animation: shake 0.4s ease; }
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {

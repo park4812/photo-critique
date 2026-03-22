@@ -12,19 +12,41 @@ function getScoreColor(score) {
   return '#f87171';
 }
 
-export default function Gallery({ photos, onPhotoClick }) {
+export default function Gallery({ photos, onPhotoClick, isAdmin, onDeletePhoto }) {
   if (photos.length === 0) {
     return (
-      <div style={{ padding: '60px 32px', textAlign: 'center', color: '#555' }}>
-        <p style={{ fontSize: '16px' }}>해당 필터에 맞는 사진이 없습니다</p>
+      <div className="empty-gallery">
+        <div className="empty-icon">📷</div>
+        <p className="empty-title">사진이 없습니다</p>
+        <p className="empty-subtitle">
+          {isAdmin
+            ? '상단의 "사진 업로드" 버튼으로 사진을 추가하세요'
+            : '관리자가 사진을 업로드하면 여기에 표시됩니다'}
+        </p>
       </div>
     );
   }
+
+  const handleDelete = (e, photoId) => {
+    e.stopPropagation();
+    if (window.confirm('이 사진을 삭제하시겠습니까?')) {
+      onDeletePhoto(photoId);
+    }
+  };
 
   return (
     <div className="gallery">
       {photos.map(photo => (
         <div key={photo.id} className="photo-card" onClick={() => onPhotoClick(photo)}>
+          {isAdmin && (
+            <button
+              className="delete-btn-card"
+              onClick={(e) => handleDelete(e, photo.id)}
+              title="사진 삭제"
+            >
+              ✕
+            </button>
+          )}
           <img
             className="photo-card-img"
             src={photo.thumbnailUrl || photo.imageUrl}

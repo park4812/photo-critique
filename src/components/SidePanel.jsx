@@ -14,7 +14,7 @@ function getScoreClass(score) {
   return 'score-low';
 }
 
-export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEvaluate }) {
+export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEvaluate, isAdmin, onDeletePhoto }) {
   const [activeTab, setActiveTab] = useState('critique');
   const [reEvalLoading, setReEvalLoading] = useState(false);
 
@@ -39,7 +39,22 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
     <div className={`side-panel ${isOpen ? 'open' : ''}`}>
       <div className="panel-header">
         <span className="panel-title">{photo.title}</span>
-        <button className="panel-close" onClick={onClose}>&times;</button>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {isAdmin && (
+            <button
+              className="panel-delete-btn"
+              onClick={() => {
+                if (window.confirm('이 사진을 삭제하시겠습니까?')) {
+                  onDeletePhoto(photo.id);
+                }
+              }}
+              title="사진 삭제"
+            >
+              🗑
+            </button>
+          )}
+          <button className="panel-close" onClick={onClose}>&times;</button>
+        </div>
       </div>
 
       <img className="panel-image" src={photo.imageUrl} alt={photo.title} />

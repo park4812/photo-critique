@@ -1,29 +1,28 @@
 import { useState, useMemo } from 'react';
-import { samplePhotos, categories } from './sampleData';
+import { categories } from './sampleData';
 import Gallery from './components/Gallery';
 import SidePanel from './components/SidePanel';
 import UploadModal from './components/UploadModal';
 import FilterBar from './components/FilterBar';
+import AdminLogin from './components/AdminLogin';
 import './App.css';
 
 // Set to true when Firebase is configured
 const USE_FIREBASE = false;
 
+// Admin password hash (SHA-256 of "283456")
+const ADMIN_PASSWORD = '283456';
+
 function App() {
-  const [photos, setPhotos] = useState(samplePhotos);
+  const [photos, setPhotos] = useState([]);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("전체");
   const [sortBy, setSortBy] = useState("date");
   const [scoreFilter, setScoreFilter] = useState([0, 10]);
-
-  // TODO: When USE_FIREBASE is true, use subscribeToPhotos() for real-time updates
-  // useEffect(() => {
-  //   if (!USE_FIREBASE) return;
-  //   const unsubscribe = subscribeToPhotos(setPhotos);
-  //   return unsubscribe;
-  // }, []);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   const filteredPhotos = useMemo(() => {
     let result = photos;
@@ -54,6 +53,14 @@ function App() {
     setUploadOpen(false);
   };
 
+  const handleDeletePhoto = (photoId) => {
+    if (!isAdmin) return;
+    setPhotos(prev => prev.filter(p => p.id !== photoId));
+    if (selectedPhoto && selectedPhoto.id === photoId) {
+      handleClosePanel();
+    }
+  };
+
   const handleAddComment = (photoId, comment) => {
     setPhotos(prev => prev.map(p => {
       if (p.id === photoId) {
@@ -73,7 +80,19 @@ function App() {
     if (!USE_FIREBASE) return;
     const { reEvaluatePhoto } = await import('./services/firebaseService');
     await reEvaluatePhoto(photoId);
-    // Real-time listener will update the photo automatically
+  };
+
+  const handleLogin = (password) => {
+    if (password === ADMIN_PASSWORD) {
+      setIsAdmin(true);
+      setShowLogin(false);
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = () => {
+    setIsAdmin(false);
   };
 
   return (
@@ -83,9 +102,23 @@ function App() {
           <h1 className="app-title">Photo Critique</h1>
           <span className="app-subtitle">사진 크리틱 & 리뷰</span>
         </div>
-        <button className="upload-btn" onClick={() => setUploadOpen(true)}>
-          + 사진 업로드
-        </button>
+        <div className="header-right">
+          {isAdmin ? (
+            <>
+              <span className="admin-badge">Admin</span>
+              <button className="upload-btn" onClick={() => setUploadOpen(true)}>
+                + 사진 업로드
+              </button>
+              <button className="logout-btn" onClick={handleLogout}>
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <button className="login-btn" onClick={() => setShowLogin(true)}>
+              관리자 로그인
+            </button>
+          )}
+        </div>
       </header>
 
       <FilterBar
@@ -99,7 +132,12 @@ function App() {
         photoCount={filteredPhotos.length}
       />
 
-      <Gallery photos={filteredPhotos} onPhotoClick={handlePhotoClick} />
+      <Gallery
+        photos={filteredPhotos}
+        onPhotoClick={handlePhotoClick}
+        isAdmin={isAdmin}
+        onDeletePhoto={handleDeletePhoto}
+      />
 
       <SidePanel
         photo={selectedPhoto}
@@ -107,13 +145,22 @@ function App() {
         onClose={handleClosePanel}
         onAddComment={handleAddComment}
         onReEvaluate={USE_FIREBASE ? handleReEvaluate : null}
+        isAdmin={isAdmin}
+        onDeletePhoto={handleDeletePhoto}
       />
 
-      {uploadOpen && (
+      {uploadOpen && isAdmin && (
         <UploadModal
           onUpload={handleUpload}
           onClose={() => setUploadOpen(false)}
           useFirebase={USE_FIREBASE}
+        />
+      )}
+
+      {showLogin && (
+        <AdminLogin
+          onLogin={handleLogin}
+          onClose={() => setShowLogin(false)}
         />
       )}
     </div>
