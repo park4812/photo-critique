@@ -68,29 +68,45 @@ function App() {
   };
 
   const handleUpload = (newPhoto) => {
-    setPhotos(prev => [newPhoto, ...prev]);
+    // Firebase 모드: onSnapshot이 자동으로 추가하므로 로컬 state에 추가하지 않음
+    // 로컬 모드: 직접 state에 추가
+    if (!USE_FIREBASE) {
+      setPhotos(prev => [newPhoto, ...prev]);
+    }
     setUploadOpen(false);
   };
 
   const handleDeletePhoto = async (photoId) => {
     if (!isAdmin) return;
-    // 즉시 UI에서 제거
-    setPhotos(prev => prev.filter(p => p.id !== photoId));
     if (selectedPhoto && selectedPhoto.id === photoId) {
       handleClosePanel();
     }
-    // Firebase에서도 삭제
     if (USE_FIREBASE) {
+      // Firebase 모드: Firestore에서 삭제 → onSnapshot이 자동으로 UI 업데이트
       try {
         const { deletePhoto } = await import('./services/firebaseService');
         await deletePhoto(photoId);
       } catch (err) {
         console.error('Delete failed:', err);
+        alert('삭제 실패: ' + err.message);
       }
+    } else {
+      // 로컬 모드: state에서 직접 제거
+      setPhotos(prev => prev.filter(p => p.id !== photoId));
     }
   };
 
-  const handleAddComment = (photoId, comment) => {
+  const handleAddComment = async (photoId, comment) => {
+    if (USE_FIREBASE) {
+      // Firebase 모드: Firestore에 댓글 저장
+      try {
+        const { addComment } = await import('./services/firebaseService');
+        await addComment(photoId, comment);
+      } catch (err) {
+        console.error('Comment failed:', err);
+      }
+    }
+    // 로컬 state에도 즉시 반영 (Firebase 모드에서도 빠른 피드백을 위해)
     setPhotos(prev => prev.map(p => {
       if (p.id === photoId) {
         return { ...p, comments: [...(p.comments || []), comment] };
