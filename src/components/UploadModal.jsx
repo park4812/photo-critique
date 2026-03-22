@@ -1,29 +1,45 @@
 import { useState, useRef } from 'react';
 
-function resizeImage(file, maxWidth = 1080) {
-  return new Promise((resolve) => {
+const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+
+function resizeImage(file, maxWidth = 2048) {
+  return new Promise((resolve, reject) => {
+    if (file.size > MAX_FILE_SIZE) {
+      reject(new Error(`파일 크기가 너무 큽니다 (${(file.size / 1024 / 1024).toFixed(1)}MB). 최대 30MB까지 가능합니다.`));
+      return;
+    }
     const reader = new FileReader();
+    reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'));
     reader.onload = (e) => {
       const img = new Image();
+      img.onerror = () => reject(new Error('이미지를 불러올 수 없습니다. 지원되지 않는 형식일 수 있습니다.'));
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
+        try {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('이미지 변환에 실패했습니다.'));
+              return;
+            }
+            resolve({
+              blob,
+              dataUrl: canvas.toDataURL('image/jpeg', 0.85),
+              width,
+              height
+            });
+          }, 'image/jpeg', 0.85);
+        } catch (err) {
+          reject(new Error('이미지 리사이즈 실패: ' + err.message));
         }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-          resolve({
-            blob,
-            dataUrl: canvas.toDataURL('image/jpeg', 0.85),
-            width,
-            height
-          });
-        }, 'image/jpeg', 0.85);
       };
       img.src = e.target.result;
     };
@@ -50,11 +66,20 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
   const [uploadStatus, setUploadStatus] = useState('');
   const fileRef = useRef(null);
 
+  const [fileError, setFileError] = useState('');
+
   const handleFile = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
-    const resized = await resizeImage(file);
-    setPreview(resized.dataUrl);
-    setImageData(resized);
+    setFileError('');
+    try {
+      const resized = await resizeImage(file);
+      setPreview(resized.dataUrl);
+      setImageData(resized);
+    } catch (err) {
+      setFileError(err.message);
+      setPreview(null);
+      setImageData(null);
+    }
   };
 
   const handleDrop = (e) => {
@@ -157,7 +182,7 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
             ) : (
               <>
                 <div className="upload-dropzone-text">클릭하거나 파일을 드래그하세요</div>
-                <div className="upload-dropzone-hint">최대 1080px로 리사이즈됩니다</div>
+                <div className="upload-dropzone-hint">최대 2048px로 리사이즈 (30MB 이하)</div>
               </>
             )}
             <input
@@ -167,6 +192,16 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
               onChange={e => handleFile(e.target.files[0])}
             />
           </div>
+          {fileError && (
+            <div style={{
+              marginTop: '8px', padding: '8px 12px',
+              background: 'rgba(248, 113, 113, 0.1)',
+              border: '1px solid rgba(248, 113, 113, 0.3)',
+              borderRadius: '6px', fontSize: '12px', color: '#f87171'
+            }}>
+              {fileError}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
