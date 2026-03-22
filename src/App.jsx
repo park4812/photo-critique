@@ -72,11 +72,21 @@ function App() {
     setUploadOpen(false);
   };
 
-  const handleDeletePhoto = (photoId) => {
+  const handleDeletePhoto = async (photoId) => {
     if (!isAdmin) return;
+    // 즉시 UI에서 제거
     setPhotos(prev => prev.filter(p => p.id !== photoId));
     if (selectedPhoto && selectedPhoto.id === photoId) {
       handleClosePanel();
+    }
+    // Firebase에서도 삭제
+    if (USE_FIREBASE) {
+      try {
+        const { deletePhoto } = await import('./services/firebaseService');
+        await deletePhoto(photoId);
+      } catch (err) {
+        console.error('Delete failed:', err);
+      }
     }
   };
 

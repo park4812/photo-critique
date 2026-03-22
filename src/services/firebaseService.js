@@ -18,11 +18,11 @@
 
 import { db, storage } from '../firebase';
 import {
-  collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc,
+  collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
   query, where, orderBy, onSnapshot, serverTimestamp
 } from 'firebase/firestore';
 import {
-  ref, uploadBytes, getDownloadURL
+  ref, uploadBytes, getDownloadURL, deleteObject, listAll
 } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
@@ -161,6 +161,31 @@ export async function addComment(photoId, commentData) {
     createdAt: serverTimestamp(),
   });
   return docRef.id;
+}
+
+// ===== Delete Photo =====
+
+/**
+ * Delete a photo: removes Firestore doc, comments subcollection, and Storage files
+ */
+export async function deletePhoto(photoId) {
+  // 1. Delete comments subcollection
+  const commentsRef = collection(db, 'photos', photoId, 'comments');
+  const commentsSnap = await getDocs(commentsRef);
+  const deleteComments = commentsSnap.docs.map(d => deleteDoc(d.ref));
+  await Promise.all(deleteComments);
+
+  // 2. Delete Storage files (original + thumbnail)
+  try {
+    const folderRef = ref(storage, `photos/${photoId}`);
+    const fileList = await listAll(folderRef);
+    await Promise.all(fileList.items.map(item => deleteObject(item)));
+  } catch (err) {
+    console.warn('Storage cleanup error (may not exist):', err);
+  }
+
+  // 3. Delete Firestore document
+  await deleteDoc(doc(db, 'photos', photoId));
 }
 
 // ===== Legacy (for sample data mode) =====
