@@ -295,15 +295,19 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
           </div>
 
           <div className="score-bars">
-            {Object.entries(photo.scores).map(([key, val]) => (
-              <div key={key} className="score-bar-row">
-                <span className="score-bar-label">{scoreLabels[key]?.ko}</span>
-                <div className="score-bar-track">
-                  <div className="score-bar-fill" style={{ width: `${val * 10}%`, background: getScoreColor(val) }} />
+            {Object.keys(scoreLabels).map(key => {
+              const val = photo.scores[key];
+              if (val == null) return null;
+              return (
+                <div key={key} className="score-bar-row">
+                  <span className="score-bar-label">{scoreLabels[key]?.ko}</span>
+                  <div className="score-bar-track">
+                    <div className="score-bar-fill" style={{ width: `${val * 10}%`, background: getScoreColor(val) }} />
+                  </div>
+                  <span className="score-bar-value" style={{ color: getScoreColor(val) }}>{val.toFixed(1)}</span>
                 </div>
-                <span className="score-bar-value" style={{ color: getScoreColor(val) }}>{val.toFixed(1)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
