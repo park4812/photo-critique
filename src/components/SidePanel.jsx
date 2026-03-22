@@ -307,7 +307,13 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
           </div>
         </div>
 
-        {/* Tags */}
+        {/* AI Tags */}
+        {photo.aiTags && photo.aiTags.length > 0 && (
+          <div className="tags">
+            {photo.aiTags.map(tag => <span key={tag} className="tag ai-tag">#{tag}</span>)}
+          </div>
+        )}
+        {/* User Tags */}
         {photo.tags && photo.tags.length > 0 && (
           <div className="tags">
             {photo.tags.map(tag => <span key={tag} className="tag">#{tag}</span>)}

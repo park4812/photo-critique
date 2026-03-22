@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { categories } from '../sampleData';
 
 function resizeImage(file, maxWidth = 1080) {
   return new Promise((resolve) => {
@@ -45,8 +44,6 @@ function resizeImage(file, maxWidth = 1080) {
 export default function UploadModal({ onUpload, onClose, useFirebase = false, uploaderName: fixedUploaderName = '' }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(categories[1]);
-  const [tagsInput, setTagsInput] = useState('');
   const [preview, setPreview] = useState(null);
   const [imageData, setImageData] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -84,10 +81,11 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
           title: title.trim(),
           description: description.trim(),
           uploaderName: fixedUploaderName || '익명',
-          category,
+          category: 'AI 분류 중...',
+          aiTags: [],
           location: '',
           date: new Date().toISOString().split('T')[0],
-          tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
+          tags: [],
         };
 
         const photoId = await uploadPhoto(photoData, imageData.blob);
@@ -114,8 +112,9 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
         id: Date.now().toString(),
         title: title.trim(),
         description: description.trim(),
-        uploaderName: uploaderName.trim() || '익명',
-        category,
+        uploaderName: fixedUploaderName || '익명',
+        category: '미분류',
+        aiTags: [],
         location: '',
         date: new Date().toISOString().split('T')[0],
         imageUrl: preview,
@@ -126,7 +125,7 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
         },
         totalScore: 0,
         critique: null,
-        tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
+        tags: [],
         comments: [],
         aiEvaluated: false,
         aiStatus: 'none'
@@ -188,22 +187,6 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
             value={description} onChange={e => setDescription(e.target.value)} />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">카테고리</label>
-          <select className="form-select" value={category}
-            onChange={e => setCategory(e.target.value)}>
-            {categories.filter(c => c !== '전체').map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">태그 (쉼표로 구분)</label>
-          <input className="form-input" placeholder="야간, 스트릿, 도쿄"
-            value={tagsInput} onChange={e => setTagsInput(e.target.value)} />
-        </div>
-
         {/* AI Info Banner */}
         <div style={{
           padding: '12px 14px',
@@ -217,7 +200,7 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             {useFirebase
-              ? '업로드 후 서버에서 자동으로 7항목 점수 + 크리틱이 생성됩니다. API 키는 서버에만 저장되어 안전합니다.'
+              ? 'AI가 자동으로 사진을 분석하여 카테고리 태그, 7항목 점수, 크리틱을 생성합니다.'
               : '샘플 모드에서는 AI 평가가 비활성화됩니다. Firebase를 연동하면 자동 평가가 활성화됩니다.'
             }
           </div>

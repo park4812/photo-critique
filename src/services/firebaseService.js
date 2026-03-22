@@ -204,6 +204,29 @@ export async function deletePhoto(photoId) {
   await deleteDoc(doc(db, 'photos', photoId));
 }
 
+// ===== Admin: User Management =====
+
+export async function listUsers() {
+  const functions = getFunctions(undefined, 'asia-northeast1');
+  const listUsersFn = httpsCallable(functions, 'listUsers');
+  const result = await listUsersFn();
+  return result.data.users;
+}
+
+export async function deleteAuthUser(uid) {
+  const functions = getFunctions(undefined, 'asia-northeast1');
+  const deleteUserFn = httpsCallable(functions, 'deleteAuthUser');
+  const result = await deleteUserFn({ uid });
+  return result.data;
+}
+
+export async function reTagAllPhotos() {
+  const functions = getFunctions(undefined, 'asia-northeast1');
+  const reTagFn = httpsCallable(functions, 'reTagAllPhotos');
+  const result = await reTagFn();
+  return result.data;
+}
+
 // ===== Legacy (for sample data mode) =====
 
 export async function addPhoto(photoData) {

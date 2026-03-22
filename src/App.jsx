@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from 'react';
-import { categories } from './sampleData';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Gallery from './components/Gallery';
@@ -7,6 +6,7 @@ import SidePanel from './components/SidePanel';
 import UploadModal from './components/UploadModal';
 import FilterBar from './components/FilterBar';
 import AuthModal from './components/AuthModal';
+import AdminPanel from './components/AdminPanel';
 import './App.css';
 
 // Firebase is configured
@@ -20,11 +20,12 @@ function App() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState("전체");
+  const [activeTag, setActiveTag] = useState("전체");
   const [sortBy, setSortBy] = useState("date");
   const [scoreFilter, setScoreFilter] = useState([0, 10]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -55,10 +56,23 @@ function App() {
     return () => { if (unsubscribe) unsubscribe(); };
   }, []);
 
+  // Collect all unique AI tags from photos
+  const allTags = useMemo(() => {
+    const tagSet = new Set();
+    photos.forEach(p => {
+      if (p.aiTags && Array.isArray(p.aiTags)) {
+        p.aiTags.forEach(t => tagSet.add(t));
+      }
+    });
+    return ["전체", ...Array.from(tagSet).sort()];
+  }, [photos]);
+
   const filteredPhotos = useMemo(() => {
     let result = photos;
-    if (activeCategory !== "전체") {
-      result = result.filter(p => p.category === activeCategory);
+    if (activeTag !== "전체") {
+      result = result.filter(p =>
+        (p.aiTags && Array.isArray(p.aiTags) && p.aiTags.includes(activeTag))
+      );
     }
     result = result.filter(p => p.totalScore >= scoreFilter[0] && p.totalScore <= scoreFilter[1]);
     if (sortBy === "totalScore") {
@@ -67,7 +81,7 @@ function App() {
       result = [...result].sort((a, b) => new Date(b.date) - new Date(a.date));
     }
     return result;
-  }, [photos, activeCategory, sortBy, scoreFilter]);
+  }, [photos, activeTag, sortBy, scoreFilter]);
 
   const handlePhotoClick = (photo) => {
     setSelectedPhoto(photo);
@@ -185,6 +199,11 @@ function App() {
               <button className="header-icon-btn" onClick={handleAdminToggle} title={isAdmin ? '관리자 모드 해제' : '관리자 모드'}>
                 {isAdmin ? '🔓' : '🔒'}
               </button>
+              {isAdmin && (
+                <button className="header-icon-btn" onClick={() => setShowAdminPanel(true)} title="가입자 관리">
+                  👥
+                </button>
+              )}
               <button className="logout-btn" onClick={handleLogout}>
                 로그아웃
               </button>
@@ -198,9 +217,9 @@ function App() {
       </header>
 
       <FilterBar
-        categories={categories}
-        activeCategory={activeCategory}
-        onCategoryChange={setActiveCategory}
+        categories={allTags}
+        activeCategory={activeTag}
+        onCategoryChange={setActiveTag}
         sortBy={sortBy}
         onSortChange={setSortBy}
         scoreFilter={scoreFilter}
@@ -240,6 +259,10 @@ function App() {
           onAuthSuccess={handleAuthSuccess}
           onClose={() => setShowAuth(false)}
         />
+      )}
+
+      {showAdminPanel && isAdmin && (
+        <AdminPanel onClose={() => setShowAdminPanel(false)} />
       )}
     </div>
   );

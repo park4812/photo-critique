@@ -244,6 +244,26 @@ body {
   font-size: 12px;
   color: var(--text-secondary);
 }
+.photo-card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+.photo-card-tag {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(200, 168, 110, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.ai-tag {
+  color: var(--accent);
+  background: rgba(200, 168, 110, 0.12);
+  border: 1px solid rgba(200, 168, 110, 0.2);
+}
 
 .photo-card-score {
   display: flex;
@@ -728,6 +748,73 @@ body {
   border: 1px solid var(--border-light);
 }
 .modal-btn-secondary:hover { background: var(--bg-hover); }
+
+/* ===== Admin Panel ===== */
+.admin-panel-modal {
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.admin-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.admin-user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.admin-user-info { flex: 1; min-width: 0; }
+.admin-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.admin-user-disabled {
+  font-size: 11px;
+  color: #f87171;
+  background: rgba(248,113,113,0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+.admin-user-email {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.admin-user-dates {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.admin-user-delete-btn {
+  padding: 6px 14px;
+  background: rgba(248,113,113,0.1);
+  color: #f87171;
+  border: 1px solid rgba(248,113,113,0.2);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: 12px;
+  transition: all 0.2s;
+}
+.admin-user-delete-btn:hover {
+  background: rgba(248,113,113,0.2);
+}
+.admin-user-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* ===== Debate View ===== */
 .debate-view { margin-bottom: 24px; }

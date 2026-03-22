@@ -66,7 +66,14 @@ export default function Gallery({ photos, onPhotoClick, isAdmin, onDeletePhoto }
           <div className="photo-card-info">
             <div className="photo-card-title">{photo.title}</div>
             <div className="photo-card-meta">
-              <span className="photo-card-category">{photo.category}</span>
+              <span className="photo-card-tags">
+                {photo.aiTags && photo.aiTags.length > 0
+                  ? photo.aiTags.map((tag, i) => (
+                      <span key={i} className="photo-card-tag">{tag}</span>
+                    ))
+                  : <span className="photo-card-category">{photo.category}</span>
+                }
+              </span>
               <span className={`photo-card-score ${getScoreClass(photo.totalScore)}`}>
                 <span className="score-dot"></span>
                 {photo.totalScore.toFixed(1)}
