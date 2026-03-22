@@ -7,8 +7,8 @@ import FilterBar from './components/FilterBar';
 import AdminLogin from './components/AdminLogin';
 import './App.css';
 
-// Set to true when Firebase is configured
-const USE_FIREBASE = false;
+// Firebase is configured
+const USE_FIREBASE = true;
 
 // Admin password hash (SHA-256 of "283456")
 const ADMIN_PASSWORD = '283456';
