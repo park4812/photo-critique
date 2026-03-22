@@ -205,9 +205,10 @@ body {
 
 .photo-card-img {
   width: 100%;
-  aspect-ratio: 4/3;
-  object-fit: cover;
+  max-height: 280px;
+  object-fit: contain;
   display: block;
+  background: #111;
 }
 
 .photo-card-overlay {
@@ -327,8 +328,9 @@ body {
 
 .panel-image {
   width: 100%;
-  aspect-ratio: 4/3;
-  object-fit: cover;
+  max-height: 400px;
+  object-fit: contain;
+  background: #111;
 }
 
 .panel-content { padding: 20px; flex: 1; }
@@ -700,7 +702,8 @@ body {
 .upload-preview img {
   width: 100%;
   max-height: 300px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #111;
 }
 
 .modal-actions {

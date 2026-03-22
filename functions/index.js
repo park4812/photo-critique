@@ -48,9 +48,20 @@ const EVAL_PROMPT = `당신은 전문 사진 크리틱입니다.
     "improvements": ["개선점1", "개선점2"],
     "technicalNotes": "기술적 조언"
   },
+  "references": [
+    {
+      "photographer": "작가 이름",
+      "work": "대표 작품 또는 시리즈명",
+      "reason": "이 사진과의 연관성 또는 참고 포인트"
+    }
+  ],
   "suggestedCategory": "거리/상점 외관",
   "suggestedTags": ["야간", "스트릿"]
 }
+
+references에는 이 사진의 스타일, 구도, 주제와 관련된 참고할 만한 유명 사진작가 2~3명을 추천해주세요.
+도쿄 야간 거리 사진이므로 일본 사진작가도 적극적으로 포함하되, 해외 작가도 관련 있으면 포함하세요.
+각 작가의 대표 작품이나 시리즈와 함께, 이 사진을 발전시키는 데 어떤 점을 참고하면 좋을지 간단히 설명해주세요.
 
 카테고리는 다음 중 하나: 거리/상점 외관, 골목/거리 풍경, 정물/디테일, 음식, 실내/다큐멘터리
 한국어로 작성하세요.`;
@@ -110,10 +121,18 @@ ${JSON.stringify(evaluations.gemini, null, 2)}
     "improvements": ["합의된 개선점1", "합의된 개선점2"],
     "technicalNotes": "합의된 기술적 조언"
   },
+  "references": [
+    {
+      "photographer": "작가 이름",
+      "work": "대표 작품 또는 시리즈명",
+      "reason": "이 사진과의 연관성 또는 참고 포인트"
+    }
+  ],
   "suggestedCategory": "거리/상점 외관",
   "suggestedTags": ["야간", "스트릿"]
 }
 
+references에는 3인의 토론을 종합하여, 이 사진의 스타일과 관련된 참고할 만한 사진작가 2~3명을 추천해주세요.
 토론은 3~6개 메시지로 진행하되, 점수 차이가 큰 항목 위주로 논의하세요.
 각 크리틱은 자신의 원래 평가 근거를 설명하고, 다른 의견에 동의/반박합니다.
 최종 점수는 단순 평균이 아닌 토론을 통해 합의된 점수여야 합니다.
@@ -157,7 +176,7 @@ async function callGPT(base64, apiKey) {
 
 async function callGemini(base64, apiKey) {
   // Gemini REST API (v1beta)
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const body = {
     contents: [{
       parts: [
@@ -165,7 +184,7 @@ async function callGemini(base64, apiKey) {
         { text: EVAL_PROMPT },
       ],
     }],
-    generationConfig: { maxOutputTokens: 1500 },
+    generationConfig: { maxOutputTokens: 8192, responseMimeType: "application/json" },
   };
 
   const res = await fetch(url, {
@@ -180,8 +199,14 @@ async function callGemini(base64, apiKey) {
   }
 
   const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Gemini returned empty response");
+  // gemini-2.5-flash: find the non-thinking text part
+  const parts = data.candidates?.[0]?.content?.parts;
+  const responsePart = parts?.filter(p => !p.thought).pop();
+  const text = responsePart?.text;
+  if (!text) {
+    console.error("Gemini raw response:", JSON.stringify(data.candidates?.[0]?.content));
+    throw new Error("Gemini returned empty response");
+  }
   return parseAIResponse(text);
 }
 
@@ -224,6 +249,7 @@ exports.autoEvaluatePhoto = onObjectFinalized(
         scores: result.scores,
         totalScore: result.totalScore,
         critique: result.critique,
+        references: result.references || [],
         suggestedCategory: result.suggestedCategory || null,
         suggestedTags: result.suggestedTags || [],
         aiEvaluated: true,
@@ -281,10 +307,15 @@ exports.debateEvaluatePhoto = onCall(
         gemini: geminiResult.status === "fulfilled" ? geminiResult.value : null,
       };
 
+      // Log failed AI calls
+      if (claudeResult.status === "rejected") console.error("Claude failed:", claudeResult.reason?.message || claudeResult.reason);
+      if (gptResult.status === "rejected") console.error("GPT failed:", gptResult.reason?.message || gptResult.reason);
+      if (geminiResult.status === "rejected") console.error("Gemini failed:", geminiResult.reason?.message || geminiResult.reason);
+
       // Count successful evaluations
       const successfulEvals = Object.values(evaluations).filter(Boolean);
-      if (successfulEvals.length < 2) {
-        throw new Error("최소 2개 AI의 응답이 필요합니다. 실패한 모델을 확인하세요.");
+      if (successfulEvals.length < 1) {
+        throw new Error("모든 AI가 실패했습니다. API 키와 할당량을 확인하세요.");
       }
 
       // Fill nulls with placeholder for debate
@@ -306,6 +337,7 @@ exports.debateEvaluatePhoto = onCall(
         scores: debateResult.finalScores,
         totalScore: finalTotal,
         critique: debateResult.finalCritique,
+        references: debateResult.references || [],
         suggestedCategory: debateResult.suggestedCategory || null,
         suggestedTags: debateResult.suggestedTags || [],
         aiEvaluated: true,
@@ -359,6 +391,7 @@ exports.reEvaluatePhoto = onCall(
       scores: result.scores,
       totalScore: result.totalScore,
       critique: result.critique,
+      references: result.references || [],
       aiEvaluated: true,
       aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
       aiModel: "claude-sonnet-4-20250514",
