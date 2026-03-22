@@ -1,22 +1,82 @@
 import { useState } from 'react';
 import { scoreLabels } from '../sampleData';
 
+function StarRating({ value = 0, onChange, size = 20 }) {
+  const [hoverValue, setHoverValue] = useState(0);
+  const stars = [1, 2, 3, 4, 5];
+  const displayValue = hoverValue || value;
+
+  const handleClick = (starIndex, isHalf) => {
+    const newValue = isHalf ? (starIndex - 0.5) * 2 : starIndex * 2; // Convert to 0-10 scale
+    onChange(newValue === value ? 0 : newValue);
+  };
+
+  const handleMouseMove = (starIndex, e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isLeftHalf = (e.clientX - rect.left) < rect.width / 2;
+    setHoverValue(isLeftHalf ? (starIndex - 0.5) * 2 : starIndex * 2);
+  };
+
+  return (
+    <div className="star-rating" onMouseLeave={() => setHoverValue(0)}>
+      {stars.map(star => {
+        const starScore = star * 2; // Each star = 2 points
+        const halfStarScore = (star - 0.5) * 2;
+        const isFull = displayValue >= starScore;
+        const isHalf = !isFull && displayValue >= halfStarScore;
+
+        return (
+          <span
+            key={star}
+            className={`star ${isFull ? 'star-full' : isHalf ? 'star-half' : 'star-empty'}`}
+            style={{ fontSize: `${size}px`, cursor: 'pointer' }}
+            onMouseMove={(e) => handleMouseMove(star, e)}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const isLeftHalf = (e.clientX - rect.left) < rect.width / 2;
+              handleClick(star, isLeftHalf);
+            }}
+          >
+            {isFull ? '★' : isHalf ? '⯨' : '☆'}
+          </span>
+        );
+      })}
+      {value > 0 && (
+        <span className="star-value">{value.toFixed(1)}</span>
+      )}
+    </div>
+  );
+}
+
+// Simpler star display for half-star using CSS overlay
+function StarDisplay({ value = 0, size = 14 }) {
+  const stars = [1, 2, 3, 4, 5];
+  return (
+    <span className="star-display">
+      {stars.map(star => {
+        const starScore = star * 2;
+        const halfStarScore = (star - 0.5) * 2;
+        const isFull = value >= starScore;
+        const isHalf = !isFull && value >= halfStarScore;
+        return (
+          <span key={star} style={{ fontSize: `${size}px` }}
+            className={isFull ? 'star-full' : isHalf ? 'star-half' : 'star-empty'}>
+            {isFull ? '★' : isHalf ? '⯨' : '☆'}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+export { StarDisplay };
+
 export default function CommentForm({ photoId, onSubmit }) {
   const [author, setAuthor] = useState('');
   const [text, setText] = useState('');
-  const [showScores, setShowScores] = useState(false);
+  const [overallRating, setOverallRating] = useState(0);
+  const [showDetailScores, setShowDetailScores] = useState(false);
   const [scores, setScores] = useState({});
-
-  const handleScoreChange = (key, value) => {
-    const num = parseFloat(value);
-    if (value === '') {
-      const next = { ...scores };
-      delete next[key];
-      setScores(next);
-    } else if (!isNaN(num) && num >= 0 && num <= 10) {
-      setScores(prev => ({ ...prev, [key]: num }));
-    }
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -25,14 +85,16 @@ export default function CommentForm({ photoId, onSubmit }) {
     onSubmit({
       author: author.trim(),
       text: text.trim(),
-      scores: showScores ? scores : {},
+      overallRating,
+      scores: showDetailScores ? scores : {},
       date: new Date().toISOString().split('T')[0]
     });
 
     setAuthor('');
     setText('');
+    setOverallRating(0);
     setScores({});
-    setShowScores(false);
+    setShowDetailScores(false);
   };
 
   return (
@@ -53,37 +115,39 @@ export default function CommentForm({ photoId, onSubmit }) {
         onChange={e => setText(e.target.value)}
       />
 
+      {/* Overall Star Rating */}
+      <div className="comment-rating-section">
+        <span className="comment-rating-label">별점</span>
+        <StarRating value={overallRating} onChange={setOverallRating} size={24} />
+      </div>
+
+      {/* Detailed Scores Toggle */}
       <div style={{ marginBottom: '12px' }}>
         <label style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '12px',
-          color: 'var(--text-secondary)',
-          cursor: 'pointer'
+          display: 'flex', alignItems: 'center', gap: '8px',
+          fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer'
         }}>
           <input
             type="checkbox"
-            checked={showScores}
-            onChange={e => setShowScores(e.target.checked)}
+            checked={showDetailScores}
+            onChange={e => setShowDetailScores(e.target.checked)}
             style={{ accentColor: 'var(--accent)' }}
           />
-          항목별 점수도 매기기
+          항목별 세부 평점 매기기
         </label>
       </div>
 
-      {showScores && (
-        <div className="comment-scores-input">
+      {showDetailScores && (
+        <div className="comment-detail-scores">
           {Object.entries(scoreLabels).map(([key, label]) => (
-            <div key={key} className="comment-score-input-row">
-              <span className="comment-score-input-label">{label.ko}</span>
-              <input
-                type="number"
-                className="comment-score-input"
-                min="0" max="10" step="0.5"
-                placeholder="-"
-                value={scores[key] ?? ''}
-                onChange={e => handleScoreChange(key, e.target.value)}
+            <div key={key} className="comment-detail-score-row">
+              <span className="comment-detail-score-label">
+                {label.icon} {label.ko}
+              </span>
+              <StarRating
+                value={scores[key] || 0}
+                onChange={(val) => setScores(prev => ({ ...prev, [key]: val }))}
+                size={18}
               />
             </div>
           ))}

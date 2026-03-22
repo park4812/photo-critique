@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { scoreLabels } from '../sampleData';
-import CommentForm from './CommentForm';
+import CommentForm, { StarDisplay } from './CommentForm';
 
 function getScoreColor(score) {
   if (score >= 7) return '#4ade80';
@@ -375,10 +375,18 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
                   <span className="comment-author">{c.author}</span>
                   <span className="comment-date">{c.date}</span>
                 </div>
+                {c.overallRating > 0 && (
+                  <div className="comment-overall-rating">
+                    <StarDisplay value={c.overallRating} size={16} />
+                    <span className="comment-rating-value">{c.overallRating.toFixed(1)}</span>
+                  </div>
+                )}
                 {c.scores && Object.keys(c.scores).length > 0 && (
-                  <div className="comment-scores">
+                  <div className="comment-detail-chips">
                     {Object.entries(c.scores).map(([key, val]) => (
-                      <span key={key} className="comment-score-chip">{scoreLabels[key]?.ko} {val}</span>
+                      <span key={key} className="comment-score-chip">
+                        {scoreLabels[key]?.icon} {scoreLabels[key]?.ko} <StarDisplay value={val} size={11} />
+                      </span>
                     ))}
                   </div>
                 )}

@@ -508,31 +508,96 @@ body {
   margin-bottom: 12px;
 }
 
-.comment-scores-input {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+/* Star Rating */
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.star {
+  transition: transform 0.1s;
+  user-select: none;
+  line-height: 1;
+}
+.star:hover {
+  transform: scale(1.2);
+}
+.star-full {
+  color: #fbbf24;
+}
+.star-half {
+  color: #fbbf24;
+}
+.star-empty {
+  color: #333;
+}
+.star-value {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.star-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+/* Comment Overall Rating */
+.comment-overall-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.comment-rating-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+/* Comment Detail Chips */
+.comment-detail-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* Comment Rating Section in Form */
+.comment-rating-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 0;
+}
+.comment-rating-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  min-width: 32px;
+}
+
+/* Comment Detail Scores in Form */
+.comment-detail-scores {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-bottom: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
 }
-.comment-score-input-row {
+.comment-detail-score-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
 }
-.comment-score-input-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-.comment-score-input {
-  width: 48px;
-  padding: 4px;
-  background: var(--bg);
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
-  color: var(--text);
+.comment-detail-score-label {
   font-size: 12px;
-  text-align: center;
+  color: var(--text-secondary);
 }
 
 .comment-name-input,
