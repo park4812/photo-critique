@@ -120,9 +120,10 @@ function DebateView({ debate, individualEvaluations }) {
   );
 }
 
-export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEvaluate, isAdmin, onDeletePhoto }) {
+export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEvaluate, onDebateEvaluate, isAdmin, onDeletePhoto }) {
   const [activeTab, setActiveTab] = useState('critique');
   const [reEvalLoading, setReEvalLoading] = useState(false);
+  const [debateLoading, setDebateLoading] = useState(false);
 
   if (!photo) return <div className={`side-panel ${isOpen ? 'open' : ''}`}></div>;
 
@@ -141,6 +142,17 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
       console.error('Re-evaluate failed:', err);
     }
     setReEvalLoading(false);
+  };
+
+  const handleDebateEvaluate = async () => {
+    if (!onDebateEvaluate) return;
+    setDebateLoading(true);
+    try {
+      await onDebateEvaluate(photo.id);
+    } catch (err) {
+      console.error('Debate evaluate failed:', err);
+    }
+    setDebateLoading(false);
   };
 
   const tabs = [
@@ -264,11 +276,21 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
                 ) : null}
               </div>
             </div>
-            {onReEvaluate && photo.aiEvaluated && !isPending && (
-              <button onClick={handleReEvaluate} disabled={reEvalLoading}
-                style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: '11px', background: 'transparent', border: '1px solid var(--border-light)', borderRadius: '4px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                {reEvalLoading ? '...' : '재평가'}
-              </button>
+            {photo.aiEvaluated && !isPending && (
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                {onDebateEvaluate && !isDebateModel && photo.debateStatus !== 'processing' && (
+                  <button onClick={handleDebateEvaluate} disabled={debateLoading}
+                    style={{ padding: '4px 10px', fontSize: '11px', background: 'rgba(162, 155, 254, 0.15)', border: '1px solid rgba(162, 155, 254, 0.3)', borderRadius: '4px', color: '#a29bfe', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {debateLoading ? '...' : '3-AI 토론'}
+                  </button>
+                )}
+                {onReEvaluate && (
+                  <button onClick={handleReEvaluate} disabled={reEvalLoading}
+                    style={{ padding: '4px 10px', fontSize: '11px', background: 'transparent', border: '1px solid var(--border-light)', borderRadius: '4px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                    {reEvalLoading ? '...' : '재평가'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

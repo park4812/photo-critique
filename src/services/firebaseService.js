@@ -118,6 +118,22 @@ export async function uploadPhoto(photoData, imageBlob) {
 }
 
 /**
+ * Trigger 3-AI debate evaluation (Claude + GPT-4 + Gemini)
+ */
+export async function debateEvaluatePhoto(photoId) {
+  const functions = getFunctions(undefined, 'asia-northeast1');
+  const debateEvaluate = httpsCallable(functions, 'debateEvaluatePhoto');
+
+  // Mark as debate processing
+  await updateDoc(doc(db, 'photos', photoId), {
+    debateStatus: 'processing',
+  });
+
+  const result = await debateEvaluate({ photoId });
+  return result.data;
+}
+
+/**
  * Manually trigger re-evaluation via callable Cloud Function
  */
 export async function reEvaluatePhoto(photoId) {

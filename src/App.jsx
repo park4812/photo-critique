@@ -127,6 +127,12 @@ function App() {
     await reEvaluatePhoto(photoId);
   };
 
+  const handleDebateEvaluate = async (photoId) => {
+    if (!USE_FIREBASE) return;
+    const { debateEvaluatePhoto } = await import('./services/firebaseService');
+    await debateEvaluatePhoto(photoId);
+  };
+
   const handleLogin = (password) => {
     if (password === ADMIN_PASSWORD) {
       setIsAdmin(true);
@@ -190,6 +196,7 @@ function App() {
         onClose={handleClosePanel}
         onAddComment={handleAddComment}
         onReEvaluate={USE_FIREBASE ? handleReEvaluate : null}
+        onDebateEvaluate={USE_FIREBASE ? handleDebateEvaluate : null}
         isAdmin={isAdmin}
         onDeletePhoto={handleDeletePhoto}
       />
