@@ -175,9 +175,9 @@ async function callGPT(base64, apiKey) {
   return parseAIResponse(response.choices[0].message.content);
 }
 
-async function callGemini(base64, apiKey) {
-  // Gemini REST API (v1beta)
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+async function callGemini(base64, apiKey, retries = 2) {
+  // Gemini REST API (v1beta) — updated to gemini-2.5-flash
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const body = {
     contents: [{
       parts: [
@@ -185,24 +185,35 @@ async function callGemini(base64, apiKey) {
         { text: EVAL_PROMPT },
       ],
     }],
-    generationConfig: { maxOutputTokens: 1500 },
+    generationConfig: { maxOutputTokens: 8192 },
   };
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini API error: ${res.status} ${errText}`);
+    if (res.status === 429 && attempt < retries) {
+      // Rate limit — wait and retry
+      const waitMs = (attempt + 1) * 5000;
+      console.warn(`Gemini rate limited (429), retrying in ${waitMs}ms (attempt ${attempt + 1}/${retries})`);
+      await new Promise(r => setTimeout(r, waitMs));
+      continue;
+    }
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Gemini API error: ${res.status} ${errText}`);
+    }
+
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error("Gemini returned empty response");
+    return parseAIResponse(text);
   }
-
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Gemini returned empty response");
-  return parseAIResponse(text);
+  throw new Error("Gemini failed after all retries");
 }
 
 async function callDebateModerator(evaluations, apiKey) {
@@ -371,25 +382,37 @@ exports.reEvaluatePhoto = onCall(
     const { photoId } = request.data;
     if (!photoId) throw new HttpsError("invalid-argument", "photoId is required");
 
-    const [files] = await bucket.getFiles({ prefix: `photos/${photoId}/original` });
-    if (files.length === 0) throw new HttpsError("not-found", "Image not found");
+    try {
+      const [files] = await bucket.getFiles({ prefix: `photos/${photoId}/original` });
+      if (files.length === 0) throw new HttpsError("not-found", "Image not found");
 
-    const base64 = await getResizedBase64(files[0].name);
-    const result = await callClaude(base64, anthropicKey.value());
+      const base64 = await getResizedBase64(files[0].name);
+      const result = await callClaude(base64, anthropicKey.value());
 
-    await db.doc(`photos/${photoId}`).update({
-      scores: result.scores,
-      totalScore: result.totalScore,
-      critique: result.critique,
-      references: result.references || [],
-      aiTags: result.aiTags || [],
-      category: (result.aiTags && result.aiTags[0]) || '미분류',
-      aiEvaluated: true,
-      aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      aiModel: "claude-sonnet-4-20250514",
-    });
+      await db.doc(`photos/${photoId}`).update({
+        scores: result.scores,
+        totalScore: result.totalScore,
+        critique: result.critique,
+        references: result.references || [],
+        aiTags: result.aiTags || [],
+        category: (result.aiTags && result.aiTags[0]) || '미분류',
+        aiEvaluated: true,
+        aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        aiModel: "claude-sonnet-4-20250514",
+        aiStatus: "done",
+        aiError: admin.firestore.FieldValue.delete(),
+      });
 
-    return { success: true, totalScore: result.totalScore };
+      return { success: true, totalScore: result.totalScore };
+    } catch (error) {
+      console.error(`Re-evaluate failed for ${photoId}:`, error);
+      await db.doc(`photos/${photoId}`).update({
+        aiEvaluated: false,
+        aiError: error.message,
+        aiStatus: "error",
+      });
+      throw new HttpsError("internal", error.message);
+    }
   }
 );
 
@@ -441,8 +464,18 @@ async function getResizedBase64(filePath) {
   return resized.toString("base64");
 }
 
+function cleanJsonText(text) {
+  // Strip markdown code blocks (```json ... ``` or ``` ... ```)
+  let cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+  // Also handle cases where the entire response is wrapped
+  const codeBlockMatch = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/i);
+  if (codeBlockMatch) cleaned = codeBlockMatch[1];
+  return cleaned;
+}
+
 function parseAIResponse(text) {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  const cleaned = cleanJsonText(text);
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to parse AI response as JSON");
   const result = JSON.parse(jsonMatch[0]);
   const scores = result.scores;
@@ -452,7 +485,8 @@ function parseAIResponse(text) {
 }
 
 function parseDebateResponse(text) {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  const cleaned = cleanJsonText(text);
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Failed to parse debate response as JSON");
   return JSON.parse(jsonMatch[0]);
 }
