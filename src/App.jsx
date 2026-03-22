@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { categories } from './sampleData';
 import Gallery from './components/Gallery';
 import SidePanel from './components/SidePanel';
@@ -23,6 +23,25 @@ function App() {
   const [scoreFilter, setScoreFilter] = useState([0, 10]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+
+  // Firebase 실시간 구독: Firestore에서 사진 목록을 실시간으로 불러옴
+  useEffect(() => {
+    if (!USE_FIREBASE) return;
+    let unsubscribe;
+    (async () => {
+      const { subscribeToPhotos } = await import('./services/firebaseService');
+      unsubscribe = subscribeToPhotos((firebasePhotos) => {
+        setPhotos(firebasePhotos);
+        // 선택된 사진도 실시간 업데이트
+        setSelectedPhoto(prev => {
+          if (!prev) return prev;
+          const updated = firebasePhotos.find(p => p.id === prev.id);
+          return updated || prev;
+        });
+      });
+    })();
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, []);
 
   const filteredPhotos = useMemo(() => {
     let result = photos;
