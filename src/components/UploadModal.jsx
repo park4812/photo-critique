@@ -24,42 +24,53 @@ async function ensureJpegCompatible(file) {
 
 function resizeImage(file, maxWidth = 2048) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'));
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('이미지를 불러올 수 없습니다. 지원되지 않는 형식일 수 있습니다.'));
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          let { width, height } = img;
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob((blob) => {
-            if (!blob) {
-              reject(new Error('이미지 변환에 실패했습니다.'));
-              return;
-            }
-            resolve({
-              blob,
-              dataUrl: canvas.toDataURL('image/jpeg', 0.85),
-              width,
-              height
-            });
-          }, 'image/jpeg', 0.85);
-        } catch (err) {
-          reject(new Error('이미지 리사이즈 실패: ' + err.message));
-        }
-      };
-      img.src = e.target.result;
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('이미지를 불러올 수 없습니다. 지원되지 않는 형식일 수 있습니다.'));
     };
-    reader.readAsDataURL(file);
+    img.onload = () => {
+      try {
+        URL.revokeObjectURL(objectUrl);
+        let { width, height } = img;
+
+        // 모바일 Safari 캔버스 제한 (~16MP) 대응
+        const MAX_PIXELS = 16000000;
+        const pixels = width * height;
+        if (pixels > MAX_PIXELS) {
+          const scale = Math.sqrt(MAX_PIXELS / pixels);
+          width = Math.floor(width * scale);
+          height = Math.floor(height * scale);
+        }
+
+        if (width > maxWidth) {
+          height = Math.floor((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('캔버스를 생성할 수 없습니다.'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('이미지 변환에 실패했습니다.'));
+            return;
+          }
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve({ blob, dataUrl, width, height });
+        }, 'image/jpeg', 0.85);
+      } catch (err) {
+        reject(new Error('이미지 리사이즈 실패: ' + err.message));
+      }
+    };
+    img.src = objectUrl;
   });
 }
 
