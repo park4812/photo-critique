@@ -402,6 +402,7 @@ function App() {
         onDebateEvaluate={USE_FIREBASE ? handleDebateEvaluate : null}
         isAdmin={isAdmin}
         onDeletePhoto={handleDeletePhoto}
+        currentUser={currentUser}
       />
 
       {uploadOpen && currentUser && (
