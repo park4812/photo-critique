@@ -97,11 +97,17 @@ export default function AdminPanel({ onClose }) {
                       type="checkbox"
                       checked={contestManagers.includes(user.uid)}
                       onChange={async (e) => {
-                        const { setContestManagers: saveMgrs } = await import('../services/firebaseService');
-                        const next = e.target.checked
-                          ? [...contestManagers, user.uid]
-                          : contestManagers.filter(u => u !== user.uid);
-                        await saveMgrs(next);
+                        const isChecked = e.target.checked;
+                        try {
+                          const { setContestManagers: saveMgrs } = await import('../services/firebaseService');
+                          const next = isChecked
+                            ? [...contestManagers, user.uid]
+                            : contestManagers.filter(u => u !== user.uid);
+                          await saveMgrs(next);
+                        } catch (err) {
+                          console.error('투표 관리자 설정 실패:', err);
+                          alert('투표 관리자 설정 실패: ' + err.message);
+                        }
                       }}
                     />
                     <span className="admin-toggle-label">🗳️</span>
