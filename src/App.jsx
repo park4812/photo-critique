@@ -9,6 +9,7 @@ import AuthModal from './components/AuthModal';
 import AdminPanel from './components/AdminPanel';
 import AlbumList from './components/AlbumList';
 import AlbumDetail from './components/AlbumDetail';
+import TagManager from './components/TagManager';
 import './App.css';
 
 // Firebase is configured
@@ -28,6 +29,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showTagManager, setShowTagManager] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   // URL hash에서 초기 뷰 상태 복원
@@ -315,6 +317,11 @@ function App() {
                 {isAdmin ? '🔓' : '🔒'}
               </button>
               {isAdmin && (
+                <button className="header-icon-btn" onClick={() => setShowTagManager(true)} title="태그 관리">
+                  🏷
+                </button>
+              )}
+              {isAdmin && (
                 <button className="header-icon-btn" onClick={() => setShowAdminPanel(true)} title="가입자 관리">
                   👥
                 </button>
@@ -423,6 +430,10 @@ function App() {
 
       {showAdminPanel && isAdmin && (
         <AdminPanel onClose={() => setShowAdminPanel(false)} />
+      )}
+
+      {showTagManager && isAdmin && (
+        <TagManager photos={photos} onClose={() => setShowTagManager(false)} />
       )}
     </div>
   );

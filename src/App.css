@@ -1618,3 +1618,192 @@ body {
   .view-tabs { padding: 0 12px; }
   .album-list-container, .album-detail-container { padding: 16px 12px; }
 }
+
+/* ===== Tag Manager ===== */
+.tag-manager-modal {
+  width: 90vw;
+  max-width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.tag-mgr-result {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.tag-mgr-result.success {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+}
+.tag-mgr-result.error {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+}
+.tag-mgr-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.tag-mgr-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+.tag-mgr-input:focus {
+  border-color: var(--accent);
+}
+.tag-mgr-selected-count {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tag-mgr-list {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  max-height: 340px;
+}
+.tag-mgr-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.tag-mgr-item:last-child { border-bottom: none; }
+.tag-mgr-item:hover { background: rgba(255,255,255,0.03); }
+.tag-mgr-item.selected { background: rgba(200, 168, 110, 0.08); }
+.tag-mgr-item-check {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--border-light);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.tag-mgr-item.selected .tag-mgr-item-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+}
+.tag-mgr-item-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+}
+.tag-mgr-item-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.tag-mgr-btn-rename {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tag-mgr-item:hover .tag-mgr-btn-rename { opacity: 0.7; }
+.tag-mgr-btn-rename:hover { opacity: 1 !important; }
+
+.tag-mgr-rename-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tag-mgr-rename-input {
+  flex: 1;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+.tag-mgr-btn-sm {
+  padding: 4px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+.tag-mgr-btn-sm:hover { background: rgba(255,255,255,0.05); }
+.tag-mgr-btn-sm.cancel { color: var(--text-muted); }
+
+.tag-mgr-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tag-mgr-merge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(162, 155, 254, 0.08);
+  border: 1px solid rgba(162, 155, 254, 0.2);
+  border-radius: 8px;
+}
+.tag-mgr-merge-label {
+  font-size: 12px;
+  color: #a29bfe;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tag-mgr-bottom-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tag-mgr-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tag-mgr-btn:hover { background: rgba(255,255,255,0.05); }
+.tag-mgr-btn:disabled { opacity: 0.5; cursor: default; }
+.tag-mgr-btn.delete {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #f87171;
+}
+.tag-mgr-btn.delete:hover { background: rgba(248, 113, 113, 0.2); }
+.tag-mgr-btn.merge {
+  background: rgba(162, 155, 254, 0.15);
+  border-color: rgba(162, 155, 254, 0.3);
+  color: #a29bfe;
+  white-space: nowrap;
+}
+.tag-mgr-btn.merge:hover { background: rgba(162, 155, 254, 0.25); }
+.tag-mgr-btn.close {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+}
+.tag-mgr-btn.close:hover { opacity: 0.9; }

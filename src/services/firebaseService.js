@@ -227,6 +227,80 @@ export async function reTagAllPhotos() {
   return result.data;
 }
 
+// ===== Tag Management =====
+
+/**
+ * 모든 사진에서 특정 태그를 삭제
+ */
+export async function deleteTag(tagName) {
+  const q = query(collection(db, 'photos'), where('aiTags', 'array-contains', tagName));
+  const snapshot = await getDocs(q);
+  const updates = snapshot.docs.map(d => {
+    const tags = d.data().aiTags || [];
+    return updateDoc(d.ref, {
+      aiTags: tags.filter(t => t !== tagName),
+    });
+  });
+  await Promise.all(updates);
+  return snapshot.size;
+}
+
+/**
+ * 여러 태그를 하나로 병합 (sourceTags → targetTag)
+ * 모든 사진에서 sourceTags를 targetTag로 교체, 중복 제거
+ */
+export async function mergeTags(sourceTags, targetTag) {
+  const allSourceTags = [...new Set([...sourceTags, targetTag])];
+  // 각 소스 태그를 가진 사진을 조회
+  const photoMap = new Map();
+  for (const tag of allSourceTags) {
+    const q = query(collection(db, 'photos'), where('aiTags', 'array-contains', tag));
+    const snapshot = await getDocs(q);
+    snapshot.docs.forEach(d => {
+      if (!photoMap.has(d.id)) photoMap.set(d.id, { ref: d.ref, tags: d.data().aiTags || [] });
+    });
+  }
+  // 각 사진에서 소스 태그들을 targetTag 하나로 교체
+  const updates = [];
+  photoMap.forEach(({ ref: docRef, tags }) => {
+    const newTags = tags.filter(t => !allSourceTags.includes(t));
+    newTags.push(targetTag);
+    // 중복 제거
+    const uniqueTags = [...new Set(newTags)];
+    updates.push(updateDoc(docRef, { aiTags: uniqueTags }));
+  });
+  await Promise.all(updates);
+  return photoMap.size;
+}
+
+/**
+ * 특정 태그 이름 변경 (모든 사진에서)
+ */
+export async function renameTag(oldName, newName) {
+  const q = query(collection(db, 'photos'), where('aiTags', 'array-contains', oldName));
+  const snapshot = await getDocs(q);
+  const updates = snapshot.docs.map(d => {
+    const tags = d.data().aiTags || [];
+    const newTags = [...new Set(tags.map(t => t === oldName ? newName : t))];
+    return updateDoc(d.ref, { aiTags: newTags });
+  });
+  await Promise.all(updates);
+  return snapshot.size;
+}
+
+/**
+ * 특정 사진에 태그 추가
+ */
+export async function addTagToPhoto(photoId, tagName) {
+  const photoRef = doc(db, 'photos', photoId);
+  const photoSnap = await getDoc(photoRef);
+  if (!photoSnap.exists()) return;
+  const tags = photoSnap.data().aiTags || [];
+  if (!tags.includes(tagName)) {
+    await updateDoc(photoRef, { aiTags: [...tags, tagName] });
+  }
+}
+
 // ===== Albums =====
 
 export function subscribeToAlbums(callback) {
