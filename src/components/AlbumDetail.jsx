@@ -50,11 +50,13 @@ export default function AlbumDetail({
   // 관리자: 모든 사진 / 일반 유저: 자기 사진만
   const availablePhotos = useMemo(() => {
     const inAlbum = new Set(album.photoIds || []);
+    const userName = currentUser?.displayName || currentUser?.email || '';
     return allPhotos.filter(p => {
       if (inAlbum.has(p.id)) return false;
       if (isAdmin) return true;
-      // 일반 유저는 자기 사진만 추가 가능
-      return p.uploaderUid === currentUser?.uid;
+      // 일반 유저는 자기 사진만 추가 가능 (uid 매칭 또는 이름 매칭)
+      if (p.uploaderUid && currentUser?.uid) return p.uploaderUid === currentUser.uid;
+      return p.uploaderName === userName;
     });
   }, [allPhotos, album.photoIds, isAdmin, currentUser]);
 
@@ -176,7 +178,7 @@ export default function AlbumDetail({
                     </span>
                   )}
                 </div>
-                {canEdit && (isAdmin || photo.uploaderUid === currentUser?.uid) && (
+                {canEdit && (isAdmin || photo.uploaderUid === currentUser?.uid || (!photo.uploaderUid && photo.uploaderName === (currentUser?.displayName || currentUser?.email))) && (
                   <button
                     className="album-photo-remove"
                     onClick={(e) => {
