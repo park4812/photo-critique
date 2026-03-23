@@ -30,9 +30,58 @@ function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [activeView, setActiveView] = useState('gallery'); // 'gallery' | 'albums'
+  // URL hash에서 초기 뷰 상태 복원
+  const getInitialView = () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash.startsWith('albums')) return 'albums';
+    return 'gallery';
+  };
+  const getInitialAlbumId = () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash.startsWith('albums/')) return hash.split('/')[1];
+    return null;
+  };
+
+  const [activeView, setActiveView] = useState(getInitialView);
   const [albums, setAlbums] = useState([]);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
+  const [initialAlbumId] = useState(getInitialAlbumId);
+
+  // URL hash 동기화
+  useEffect(() => {
+    const newHash = selectedAlbum
+      ? `#albums/${selectedAlbum.id}`
+      : activeView === 'albums'
+        ? '#albums'
+        : '#gallery';
+    if (window.location.hash !== newHash) {
+      window.history.replaceState(null, '', newHash);
+    }
+  }, [activeView, selectedAlbum]);
+
+  // 브라우저 뒤로/앞으로 버튼 처리
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash.startsWith('albums/')) {
+        const albumId = hash.split('/')[1];
+        setActiveView('albums');
+        setSelectedAlbum(prev => {
+          if (prev?.id === albumId) return prev;
+          const found = albums.find(a => a.id === albumId);
+          return found || prev;
+        });
+      } else if (hash === 'albums') {
+        setActiveView('albums');
+        setSelectedAlbum(null);
+      } else {
+        setActiveView('gallery');
+        setSelectedAlbum(null);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [albums]);
 
   // Firebase Auth 상태 감시
   useEffect(() => {
@@ -69,8 +118,12 @@ function App() {
       const { subscribeToAlbums } = await import('./services/firebaseService');
       unsubscribe = subscribeToAlbums((firebaseAlbums) => {
         setAlbums(firebaseAlbums);
-        // Update selected album if it changed
         setSelectedAlbum(prev => {
+          // URL hash에서 복원된 초기 앨범 ID 처리
+          if (!prev && initialAlbumId) {
+            const found = firebaseAlbums.find(a => a.id === initialAlbumId);
+            if (found) return found;
+          }
           if (!prev) return prev;
           return firebaseAlbums.find(a => a.id === prev.id) || prev;
         });
