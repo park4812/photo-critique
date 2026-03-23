@@ -35,6 +35,18 @@ function generateToken() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
+// 비로그인 투표용 영구 고유 ID (브라우저당 1개)
+function getAnonVoterId() {
+  try {
+    let id = localStorage.getItem('anon_voter_id');
+    if (!id) {
+      id = 'anon_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+      localStorage.setItem('anon_voter_id', id);
+    }
+    return id;
+  } catch { return ''; }
+}
+
 export default function ContestDetail({ contest, onBack, currentUser, isAdmin }) {
   const [entries, setEntries] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -156,13 +168,15 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
     }
   };
 
-  // 투표
+  // 투표: 브라우저 단위 고유 ID (로그인 여부 무관하게 동일 브라우저 = 1표)
+  const voterId = getAnonVoterId();
+
   const handleVote = async (entryId) => {
-    if (!currentUser) return;
+    if (!voterId) return;
     setVotingId(entryId);
     try {
       const { voteEntry } = await import('../services/firebaseService');
-      await voteEntry(contest.id, entryId, currentUser.uid);
+      await voteEntry(contest.id, entryId, voterId);
     } catch (err) {
       console.error('Vote failed:', err);
     } finally {
@@ -385,7 +399,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
           {sortedEntries.map((entry, idx) => {
             const rank = isClosed ? idx + 1 : null;
             const rankStyle = rank && RANK_STYLES[rank];
-            const voted = entry.votes?.includes(currentUser?.uid);
+            const voted = entry.votes?.includes(voterId);
 
             return (
               <div
@@ -418,7 +432,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
                   )}
 
                   <div className="contest-entry-vote-row">
-                    {isVoting && currentUser && (
+                    {isVoting && voterId && (
                       <button
                         className={`contest-vote-btn ${voted ? 'voted' : ''}`}
                         onClick={() => handleVote(entry.id)}
