@@ -46,6 +46,8 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
   const [replacePreview, setReplacePreview] = useState(null);
   const [replaceBlob, setReplaceBlob] = useState(null);
   const [anonName, setAnonName] = useState('');
+  const [anonToken, setAnonToken] = useState(() => getEditToken(contest.id));
+  const [anonEntryId, setAnonEntryIdState] = useState(() => getAnonEntryId(contest.id));
   const fileRef = useRef(null);
   const replaceFileRef = useRef(null);
 
@@ -55,18 +57,16 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
   const isClosed = status === 'closed';
   const statusInfo = STATUS_INFO[status] || STATUS_INFO.submitting;
 
-  // 내 출품작 찾기: 로그인=uid, 비로그인=editToken
+  // 내 출품작 찾기: 로그인=uid, 비로그인=editToken (React 상태 기반)
   const myEntry = useMemo(() => {
     if (currentUser?.uid) {
       return entries.find(e => e.uploaderUid === currentUser.uid);
     }
-    const token = getEditToken(contest.id);
-    const entryId = getAnonEntryId(contest.id);
-    if (token && entryId) {
-      return entries.find(e => e.id === entryId && e.editToken === token);
+    if (anonToken && anonEntryId) {
+      return entries.find(e => e.id === anonEntryId && e.editToken === anonToken);
     }
     return null;
-  }, [entries, currentUser, contest.id]);
+  }, [entries, currentUser, anonToken, anonEntryId]);
 
   const hasSubmitted = !!myEntry;
 
@@ -132,10 +132,12 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
       const { submitEntry } = await import('../services/firebaseService');
       const token = currentUser ? '' : generateToken();
       const entryId = await submitEntry(contest.id, imageBlob, uploaderUid, uploaderName, token);
-      // 비로그인: localStorage에 토큰+엔트리ID 저장
+      // 비로그인: localStorage + React 상태 동시 업데이트
       if (!currentUser && token) {
         setEditToken(contest.id, token);
         setAnonEntryId(contest.id, entryId);
+        setAnonToken(token);
+        setAnonEntryIdState(entryId);
       }
       setPreview(null);
       setImageBlob(null);
@@ -190,6 +192,8 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
     const { deleteEntry } = await import('../services/firebaseService');
     await deleteEntry(contest.id, entryId);
     clearAnonData(contest.id);
+    setAnonToken('');
+    setAnonEntryIdState('');
   };
 
   // 사진 교체 파일 선택
