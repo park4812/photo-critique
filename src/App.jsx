@@ -59,6 +59,8 @@ function App() {
   const [contests, setContests] = useState([]);
   const [selectedContest, setSelectedContest] = useState(null);
   const [initialContestId] = useState(getInitialContestId);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
 
   // URL hash 동기화
   useEffect(() => {
@@ -181,6 +183,55 @@ function App() {
     })();
     return () => { if (unsubscribe) unsubscribe(); };
   }, []);
+
+  // 내 사진 댓글 알림 구독
+  useEffect(() => {
+    if (!currentUser || !photos.length) { setNotifications([]); return; }
+    const myPhotoIds = photos
+      .filter(p => {
+        if (p.uploaderUid && currentUser.uid) return p.uploaderUid === currentUser.uid;
+        return p.uploaderName === (currentUser.displayName || currentUser.email);
+      })
+      .map(p => p.id);
+    if (!myPhotoIds.length) { setNotifications([]); return; }
+
+    const NOTIF_KEY = `notif_lastChecked_${currentUser.uid}`;
+    const lastChecked = new Date(localStorage.getItem(NOTIF_KEY) || 0);
+
+    let unsub;
+    (async () => {
+      const { subscribeToMyPhotoNotifications } = await import('./services/firebaseService');
+      unsub = subscribeToMyPhotoNotifications(myPhotoIds, lastChecked, (newComments) => {
+        // 본인이 쓴 댓글은 제외
+        const filtered = newComments.filter(c => c.authorUid !== currentUser.uid && c.author !== (currentUser.displayName || currentUser.email));
+        setNotifications(filtered);
+      });
+    })();
+    return () => { if (unsub) unsub(); };
+  }, [currentUser, photos]);
+
+  const handleNotifClick = () => {
+    setShowNotifPanel(prev => !prev);
+  };
+
+  const handleNotifClear = () => {
+    if (!currentUser) return;
+    const NOTIF_KEY = `notif_lastChecked_${currentUser.uid}`;
+    localStorage.setItem(NOTIF_KEY, new Date().toISOString());
+    setNotifications([]);
+    setShowNotifPanel(false);
+  };
+
+  // 알림에서 사진 클릭 → 해당 사진으로 이동
+  const handleNotifPhotoClick = (photoId) => {
+    const photo = photos.find(p => p.id === photoId);
+    if (photo) {
+      setActiveView('gallery');
+      setSelectedPhoto(photo);
+      setPanelOpen(true);
+    }
+    setShowNotifPanel(false);
+  };
 
   // Collect all unique AI tags from photos
   const allTags = useMemo(() => {
@@ -368,6 +419,12 @@ function App() {
               <button className="upload-btn" onClick={() => setUploadOpen(true)}>
                 + 업로드
               </button>
+              <button className="header-icon-btn notif-bell" onClick={handleNotifClick} title="알림">
+                🔔
+                {notifications.length > 0 && (
+                  <span className="notif-badge">{notifications.length > 99 ? '99+' : notifications.length}</span>
+                )}
+              </button>
               <button className="header-icon-btn" onClick={handleAdminToggle} title={isAdmin ? '관리자 모드 해제' : '관리자 모드'}>
                 {isAdmin ? '🔓' : '🔒'}
               </button>
@@ -392,6 +449,39 @@ function App() {
           )}
         </div>
       </header>
+
+      {/* 알림 패널 */}
+      {showNotifPanel && (
+        <div className="notif-panel">
+          <div className="notif-panel-header">
+            <span>새 크리틱 알림</span>
+            {notifications.length > 0 && (
+              <button className="notif-clear-btn" onClick={handleNotifClear}>모두 읽음</button>
+            )}
+          </div>
+          {notifications.length === 0 ? (
+            <div className="notif-empty">새로운 알림이 없습니다</div>
+          ) : (
+            <div className="notif-list">
+              {notifications.slice(0, 20).map((n, i) => {
+                const photoTitle = photos.find(p => p.id === n.photoId)?.title || '사진';
+                const timeStr = n.createdAt?.toDate
+                  ? n.createdAt.toDate().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : '';
+                return (
+                  <div key={n.id || i} className="notif-item" onClick={() => handleNotifPhotoClick(n.photoId)}>
+                    <div className="notif-item-text">
+                      <strong>{n.author || '누군가'}</strong>님이 <em>{photoTitle}</em>에 크리틱을 남겼습니다
+                    </div>
+                    <div className="notif-item-time">{timeStr}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      {showNotifPanel && <div className="notif-overlay" onClick={() => setShowNotifPanel(false)} />}
 
       {/* View Tabs */}
       <div className="view-tabs">

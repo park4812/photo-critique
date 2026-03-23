@@ -18,8 +18,8 @@
 
 import { db, storage } from '../firebase';
 import {
-  collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, onSnapshot, serverTimestamp
+  collection, collectionGroup, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
+  query, where, orderBy, onSnapshot, serverTimestamp, Timestamp
 } from 'firebase/firestore';
 import {
   ref, uploadBytes, getDownloadURL, deleteObject, listAll
@@ -177,6 +177,46 @@ export async function addComment(photoId, commentData) {
     createdAt: serverTimestamp(),
   });
   return docRef.id;
+}
+
+// ===== 내 사진 댓글 알림 =====
+
+// 내 사진들에 달린 새 댓글을 실시간 구독
+export function subscribeToMyPhotoNotifications(myPhotoIds, lastCheckedTime, callback) {
+  if (!myPhotoIds.length) { callback([]); return () => {}; }
+
+  // 각 내 사진의 댓글 서브컬렉션을 구독
+  const unsubs = [];
+  const notifMap = new Map(); // photoId -> comments[]
+
+  for (const photoId of myPhotoIds) {
+    const q = query(
+      collection(db, 'photos', photoId, 'comments'),
+      orderBy('createdAt', 'desc')
+    );
+    const unsub = onSnapshot(q, (snapshot) => {
+      const newComments = snapshot.docs
+        .map(d => ({ id: d.id, photoId, ...d.data() }))
+        .filter(c => {
+          if (!c.createdAt) return false;
+          const t = c.createdAt.toDate ? c.createdAt.toDate() : new Date(c.createdAt);
+          return t > lastCheckedTime;
+        });
+      notifMap.set(photoId, newComments);
+      // 모든 새 댓글 합산 후 콜백
+      const all = [];
+      notifMap.forEach(v => all.push(...v));
+      all.sort((a, b) => {
+        const ta = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+        const tb = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+        return tb - ta;
+      });
+      callback(all);
+    });
+    unsubs.push(unsub);
+  }
+
+  return () => unsubs.forEach(u => u());
 }
 
 // ===== Delete Photo =====
@@ -427,14 +467,16 @@ export function subscribeToEntries(contestId, callback) {
   });
 }
 
-export async function submitEntry(contestId, imageBlob, uploaderUid, uploaderName) {
-  // 이미 출품했는지 확인
-  const q = query(
-    collection(db, 'contests', contestId, 'entries'),
-    where('uploaderUid', '==', uploaderUid)
-  );
-  const existing = await getDocs(q);
-  if (!existing.empty) throw new Error('이미 이 콘테스트에 출품하셨습니다.');
+export async function submitEntry(contestId, imageBlob, uploaderUid, uploaderName, editToken) {
+  // 이미 출품했는지 확인 (로그인 유저: uid, 비로그인: editToken으로 localStorage 기반)
+  if (uploaderUid) {
+    const q = query(
+      collection(db, 'contests', contestId, 'entries'),
+      where('uploaderUid', '==', uploaderUid)
+    );
+    const existing = await getDocs(q);
+    if (!existing.empty) throw new Error('이미 이 콘테스트에 출품하셨습니다.');
+  }
 
   // 엔트리 문서 생성
   const entryRef = doc(collection(db, 'contests', contestId, 'entries'));
@@ -445,14 +487,18 @@ export async function submitEntry(contestId, imageBlob, uploaderUid, uploaderNam
   await uploadBytes(storageRef, imageBlob, { contentType: 'image/jpeg' });
   const imageUrl = await getDownloadURL(storageRef);
 
-  await setDoc(entryRef, {
+  const entryData = {
     imageUrl,
-    uploaderUid,
+    uploaderUid: uploaderUid || '',
     uploaderName,
     votes: [],
     voteCount: 0,
     createdAt: serverTimestamp(),
-  });
+  };
+  // 비로그인 유저: editToken 저장
+  if (editToken) entryData.editToken = editToken;
+
+  await setDoc(entryRef, entryData);
 
   // 콘테스트 entryCount 증가
   const contestRef = doc(db, 'contests', contestId);
@@ -490,6 +536,16 @@ export async function voteEntry(contestId, entryId, voterUid) {
     const updated = votes.filter(v => v !== voterUid);
     await updateDoc(entryRef, { votes: updated, voteCount: updated.length });
   } else {
+    // 다른 엔트리에 이미 투표했으면 먼저 취소 (1인 1표)
+    const entriesSnap = await getDocs(collection(db, 'contests', contestId, 'entries'));
+    for (const d of entriesSnap.docs) {
+      if (d.id === entryId) continue;
+      const v = d.data().votes || [];
+      if (v.includes(voterUid)) {
+        const cleaned = v.filter(uid => uid !== voterUid);
+        await updateDoc(d.ref, { votes: cleaned, voteCount: cleaned.length });
+      }
+    }
     // 투표
     const updated = [...votes, voterUid];
     await updateDoc(entryRef, { votes: updated, voteCount: updated.length });

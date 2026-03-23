@@ -1092,6 +1092,100 @@ body {
   background: rgba(200, 168, 110, 0.1);
 }
 
+/* 알림 벨 + 뱃지 */
+.notif-bell { position: relative; }
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* 알림 패널 */
+.notif-panel {
+  position: fixed;
+  top: 56px;
+  right: 16px;
+  width: 340px;
+  max-height: 440px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  z-index: 1100;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.notif-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.notif-clear-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+.notif-clear-btn:hover { text-decoration: underline; }
+.notif-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.notif-list {
+  overflow-y: auto;
+  max-height: 380px;
+}
+.notif-item {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.notif-item:hover { background: rgba(255,255,255,0.05); }
+.notif-item:last-child { border-bottom: none; }
+.notif-item-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.notif-item-text strong { color: var(--accent); }
+.notif-item-text em { font-style: normal; color: #60a5fa; }
+.notif-item-time {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.notif-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1099;
+}
+@media (max-width: 640px) {
+  .notif-panel { right: 8px; left: 8px; width: auto; }
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .app.panel-open { padding-right: 0; }
@@ -1980,6 +2074,20 @@ body {
 .contest-submit-area {
   margin-bottom: 20px;
 }
+.contest-anon-name { margin-bottom: 12px; }
+.contest-anon-input {
+  width: 100%;
+  max-width: 280px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  text-align: center;
+}
+.contest-anon-input:focus { border-color: var(--accent); }
 .contest-drop-zone {
   border: 2px dashed var(--border-light);
   border-radius: 12px;

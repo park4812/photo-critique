@@ -12,6 +12,29 @@ const STATUS_INFO = {
   closed: { label: '종료', color: '#888', desc: '투표가 종료되었습니다.' },
 };
 
+// localStorage 기반 토큰 관리
+function getEditToken(contestId) {
+  try { return localStorage.getItem(`contest_token_${contestId}`) || ''; } catch { return ''; }
+}
+function setEditToken(contestId, token) {
+  try { localStorage.setItem(`contest_token_${contestId}`, token); } catch {}
+}
+function getAnonEntryId(contestId) {
+  try { return localStorage.getItem(`contest_entry_${contestId}`) || ''; } catch { return ''; }
+}
+function setAnonEntryId(contestId, entryId) {
+  try { localStorage.setItem(`contest_entry_${contestId}`, entryId); } catch {}
+}
+function clearAnonData(contestId) {
+  try {
+    localStorage.removeItem(`contest_token_${contestId}`);
+    localStorage.removeItem(`contest_entry_${contestId}`);
+  } catch {}
+}
+function generateToken() {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
 export default function ContestDetail({ contest, onBack, currentUser, isAdmin }) {
   const [entries, setEntries] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -22,6 +45,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
   const [replacing, setReplacing] = useState(false);
   const [replacePreview, setReplacePreview] = useState(null);
   const [replaceBlob, setReplaceBlob] = useState(null);
+  const [anonName, setAnonName] = useState('');
   const fileRef = useRef(null);
   const replaceFileRef = useRef(null);
 
@@ -30,7 +54,21 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
   const isVoting = status === 'voting';
   const isClosed = status === 'closed';
   const statusInfo = STATUS_INFO[status] || STATUS_INFO.submitting;
-  const hasSubmitted = entries.some(e => e.uploaderUid === currentUser?.uid);
+
+  // 내 출품작 찾기: 로그인=uid, 비로그인=editToken
+  const myEntry = useMemo(() => {
+    if (currentUser?.uid) {
+      return entries.find(e => e.uploaderUid === currentUser.uid);
+    }
+    const token = getEditToken(contest.id);
+    const entryId = getAnonEntryId(contest.id);
+    if (token && entryId) {
+      return entries.find(e => e.id === entryId && e.editToken === token);
+    }
+    return null;
+  }, [entries, currentUser, contest.id]);
+
+  const hasSubmitted = !!myEntry;
 
   // 엔트리 실시간 구독
   useEffect(() => {
@@ -80,13 +118,28 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
 
   // 출품
   const handleSubmit = async () => {
-    if (!imageBlob || !currentUser) return;
+    if (!imageBlob) return;
+    const uploaderUid = currentUser?.uid || '';
+    const uploaderName = currentUser
+      ? (currentUser.displayName || currentUser.email || '익명')
+      : (anonName.trim() || '익명');
+    if (!currentUser && !anonName.trim()) {
+      alert('이름을 입력해주세요.');
+      return;
+    }
     setUploading(true);
     try {
       const { submitEntry } = await import('../services/firebaseService');
-      await submitEntry(contest.id, imageBlob, currentUser.uid, currentUser.displayName || currentUser.email || '익명');
+      const token = currentUser ? '' : generateToken();
+      const entryId = await submitEntry(contest.id, imageBlob, uploaderUid, uploaderName, token);
+      // 비로그인: localStorage에 토큰+엔트리ID 저장
+      if (!currentUser && token) {
+        setEditToken(contest.id, token);
+        setAnonEntryId(contest.id, entryId);
+      }
       setPreview(null);
       setImageBlob(null);
+      setAnonName('');
     } catch (err) {
       alert(err.message);
     } finally {
@@ -136,6 +189,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
     if (!window.confirm('출품을 취소하시겠습니까?')) return;
     const { deleteEntry } = await import('../services/firebaseService');
     await deleteEntry(contest.id, entryId);
+    clearAnonData(contest.id);
   };
 
   // 사진 교체 파일 선택
@@ -182,6 +236,9 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
     }
   };
 
+  // 출품 가능 여부: 접수 중이고 아직 출품 안 한 경우 (로그인/비로그인 모두)
+  const canSubmit = isSubmitting && !hasSubmitted;
+
   return (
     <div className="contest-detail-container">
       {/* 헤더 */}
@@ -223,9 +280,22 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
         )}
       </div>
 
-      {/* 접수 단계: 출품 영역 */}
-      {isSubmitting && currentUser && !hasSubmitted && (
+      {/* 접수 단계: 출품 영역 (로그인/비로그인 모두) */}
+      {canSubmit && (
         <div className="contest-submit-area">
+          {/* 비로그인 시 이름 입력 */}
+          {!currentUser && (
+            <div className="contest-anon-name">
+              <input
+                type="text"
+                placeholder="이름을 입력하세요"
+                value={anonName}
+                onChange={(e) => setAnonName(e.target.value)}
+                maxLength={20}
+                className="contest-anon-input"
+              />
+            </div>
+          )}
           {!preview ? (
             <div className="contest-drop-zone" onClick={() => fileRef.current?.click()}>
               <div style={{ fontSize: '36px', marginBottom: '8px' }}>📸</div>
@@ -256,10 +326,8 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
           <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔒</div>
           <p>{entries.length}명이 출품했습니다</p>
           <p style={{ fontSize: '12px', opacity: 0.5 }}>접수 마감 후 사진이 공개됩니다</p>
-          {/* 본인 출품작만 미리보기 + 취소 가능 */}
-          {hasSubmitted && (() => {
-            const myEntry = entries.find(e => e.uploaderUid === currentUser?.uid);
-            if (!myEntry) return null;
+          {/* 본인 출품작만 미리보기 + 수정/취소 가능 */}
+          {myEntry && (() => {
             return (
               <div className="contest-my-preview">
                 <p style={{ fontSize: '12px', marginBottom: '8px', opacity: 0.7 }}>내 출품작:</p>
