@@ -1,5 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { scoreLabels } from '../sampleData';
+
+const EXIF_FIELDS = [
+  { key: 'camera', label: '카메라', icon: '📷' },
+  { key: 'lens', label: '렌즈', icon: '🔭' },
+  { key: 'settings', label: '촬영 설정', icon: '⚙️' },
+  { key: 'dateTime', label: '촬영 일시', icon: '📅' },
+  { key: 'gps', label: 'GPS 위치', icon: '📍' },
+  { key: 'resolution', label: '해상도', icon: '📐' },
+];
+
+const EXIF_SETTINGS_KEY = 'photo-critique-exif-settings';
+
+function getExifSettings() {
+  try {
+    const saved = localStorage.getItem(EXIF_SETTINGS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  // 기본값: 모두 표시
+  return EXIF_FIELDS.reduce((acc, f) => ({ ...acc, [f.key]: true }), {});
+}
+
+function saveExifSettings(settings) {
+  localStorage.setItem(EXIF_SETTINGS_KEY, JSON.stringify(settings));
+}
 import CommentForm, { StarDisplay } from './CommentForm';
 
 function getScoreColor(score) {
@@ -143,6 +167,14 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
   const [reEvalLoading, setReEvalLoading] = useState(false);
   const [debateLoading, setDebateLoading] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [exifSettings, setExifSettings] = useState(getExifSettings);
+  const [showExifConfig, setShowExifConfig] = useState(false);
+
+  const toggleExifField = (key) => {
+    const next = { ...exifSettings, [key]: !exifSettings[key] };
+    setExifSettings(next);
+    saveExifSettings(next);
+  };
 
   if (!photo) return <div className={`side-panel ${isOpen ? 'open' : ''}`}></div>;
 
@@ -207,44 +239,75 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
       {/* EXIF Info */}
       {photo.exif && (
         <div style={{
-          padding: '8px 14px', display: 'flex', flexWrap: 'wrap',
-          gap: '4px 12px', fontSize: '11px', color: 'var(--text-muted)',
+          padding: '8px 14px', fontSize: '11px', color: 'var(--text-muted)',
           borderBottom: '1px solid var(--border)',
           background: 'rgba(255,255,255,0.02)'
         }}>
-          {photo.exif.camera && (
-            <span title="카메라" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span style={{ opacity: 0.6 }}>📷</span> {photo.exif.camera}
-            </span>
-          )}
-          {photo.exif.lens && (
-            <span title="렌즈" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span style={{ opacity: 0.6 }}>🔭</span> {photo.exif.lens}
-            </span>
-          )}
-          {(photo.exif.focalLength || photo.exif.aperture || photo.exif.shutterSpeed || photo.exif.iso) && (
-            <span title="촬영 설정" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span style={{ opacity: 0.6 }}>⚙️</span>
-              {[photo.exif.focalLength, photo.exif.aperture, photo.exif.shutterSpeed, photo.exif.iso].filter(Boolean).join(' · ')}
-            </span>
-          )}
-          {photo.exif.dateTime && (
-            <span title="촬영 일시" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span style={{ opacity: 0.6 }}>📅</span> {new Date(photo.exif.dateTime).toLocaleString('ko-KR')}
-            </span>
-          )}
-          {photo.exif.gps && (
-            <a href={`https://maps.google.com/?q=${photo.exif.gps.lat},${photo.exif.gps.lng}`}
-              target="_blank" rel="noopener noreferrer"
-              title="촬영 위치 (Google Maps)"
-              style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--accent)', textDecoration: 'none' }}>
-              <span style={{ opacity: 0.6 }}>📍</span> 위치 보기
-            </a>
-          )}
-          {photo.exif.resolution && (
-            <span title="원본 해상도">
-              {photo.exif.resolution}
-            </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', alignItems: 'center' }}>
+            {exifSettings.camera && photo.exif.camera && (
+              <span title="카메라" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ opacity: 0.6 }}>📷</span> {photo.exif.camera}
+              </span>
+            )}
+            {exifSettings.lens && photo.exif.lens && (
+              <span title="렌즈" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ opacity: 0.6 }}>🔭</span> {photo.exif.lens}
+              </span>
+            )}
+            {exifSettings.settings && (photo.exif.focalLength || photo.exif.aperture || photo.exif.shutterSpeed || photo.exif.iso) && (
+              <span title="촬영 설정" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ opacity: 0.6 }}>⚙️</span>
+                {[photo.exif.focalLength, photo.exif.aperture, photo.exif.shutterSpeed, photo.exif.iso].filter(Boolean).join(' · ')}
+              </span>
+            )}
+            {exifSettings.dateTime && photo.exif.dateTime && (
+              <span title="촬영 일시" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ opacity: 0.6 }}>📅</span> {new Date(photo.exif.dateTime).toLocaleString('ko-KR')}
+              </span>
+            )}
+            {exifSettings.gps && photo.exif.gps && (
+              <a href={`https://maps.google.com/?q=${photo.exif.gps.lat},${photo.exif.gps.lng}`}
+                target="_blank" rel="noopener noreferrer"
+                title="촬영 위치 (Google Maps)"
+                style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--accent)', textDecoration: 'none' }}>
+                <span style={{ opacity: 0.6 }}>📍</span> 위치 보기
+              </a>
+            )}
+            {exifSettings.resolution && photo.exif.resolution && (
+              <span title="원본 해상도">
+                {photo.exif.resolution}
+              </span>
+            )}
+            {isAdmin && (
+              <span
+                onClick={() => setShowExifConfig(!showExifConfig)}
+                style={{ cursor: 'pointer', marginLeft: 'auto', opacity: 0.5, fontSize: '13px' }}
+                title="표시 항목 설정"
+              >⚙</span>
+            )}
+          </div>
+          {showExifConfig && isAdmin && (
+            <div style={{
+              marginTop: '8px', paddingTop: '8px',
+              borderTop: '1px solid var(--border)',
+              display: 'flex', flexWrap: 'wrap', gap: '6px'
+            }}>
+              {EXIF_FIELDS.map(f => (
+                <label key={f.key} style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '3px 8px', borderRadius: '4px', cursor: 'pointer',
+                  background: exifSettings[f.key] ? 'rgba(200,168,110,0.12)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${exifSettings[f.key] ? 'rgba(200,168,110,0.3)' : 'var(--border)'}`,
+                  fontSize: '11px', color: exifSettings[f.key] ? 'var(--text)' : 'var(--text-muted)'
+                }}>
+                  <input type="checkbox" checked={exifSettings[f.key]}
+                    onChange={() => toggleExifField(f.key)}
+                    style={{ width: '12px', height: '12px', accentColor: 'var(--accent)' }} />
+                  <span>{f.icon}</span>
+                  <span>{f.label}</span>
+                </label>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -338,7 +401,7 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
                   );
                 })()}
               </div>
-              <div style={{ fontSize: '11px', color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '11px', color: '#555', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
                 7항목 평균
                 {isDebateModel ? (
                   <span style={{

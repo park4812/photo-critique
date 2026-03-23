@@ -12,6 +12,15 @@ function getScoreColor(score) {
   return '#f87171';
 }
 
+function getGrade(score) {
+  if (score >= 9.0) return { grade: 'S', color: '#e2b340' };
+  if (score >= 8.0) return { grade: 'A', color: '#4ade80' };
+  if (score >= 7.0) return { grade: 'B', color: '#60a5fa' };
+  if (score >= 5.0) return { grade: 'C', color: '#fbbf24' };
+  if (score >= 3.0) return { grade: 'D', color: '#fb923c' };
+  return { grade: 'F', color: '#f87171' };
+}
+
 export default function Gallery({ photos, onPhotoClick, isAdmin, onDeletePhoto }) {
   if (photos.length === 0) {
     return (
@@ -87,6 +96,15 @@ export default function Gallery({ photos, onPhotoClick, isAdmin, onDeletePhoto }
                     marginRight: '4px', fontWeight: 600
                   }}>3-AI</span>
                 )}
+                {photo.totalScore > 0 && (() => {
+                  const g = getGrade(photo.totalScore);
+                  return (
+                    <span style={{
+                      fontSize: '10px', fontWeight: 700, color: g.color,
+                      marginRight: '3px'
+                    }}>{g.grade}</span>
+                  );
+                })()}
                 <span className="score-dot"></span>
                 {photo.totalScore.toFixed(1)}
               </span>
