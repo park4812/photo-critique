@@ -301,6 +301,16 @@ export async function addTagToPhoto(photoId, tagName) {
   }
 }
 
+/**
+ * AI로 태그 목록 분석하여 병합 제안 받기
+ */
+export async function analyzeTagsForMerge(tags) {
+  const functions = getFunctions(undefined, 'asia-northeast1');
+  const analyzeFn = httpsCallable(functions, 'analyzeTagsForMerge');
+  const result = await analyzeFn({ tags });
+  return result.data;
+}
+
 // ===== Albums =====
 
 export function subscribeToAlbums(callback) {

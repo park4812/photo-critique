@@ -620,6 +620,76 @@ exports.listUsers = onCall(
 // ============================================================
 // 6. Admin: Delete a user
 // ============================================================
+// ============================================================
+// 7. AI Tag Cleanup - 태그 목록을 AI가 분석하여 병합 제안
+// ============================================================
+exports.analyzeTagsForMerge = onCall(
+  {
+    region: "asia-northeast1",
+    secrets: [anthropicKey],
+    timeoutSeconds: 60,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { tags } = request.data;
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+      throw new HttpsError("invalid-argument", "태그 목록이 필요합니다.");
+    }
+
+    const tagListStr = tags.map(t => `"${t.name}" (${t.count}장)`).join(', ');
+
+    const prompt = `당신은 사진 태그 정리 전문가입니다.
+아래는 사진 갤러리에서 사용 중인 태그 목록입니다. 각 태그 옆의 숫자는 해당 태그가 사용된 사진 수입니다.
+
+태그 목록: ${tagListStr}
+
+다음 기준으로 병합해야 할 태그 그룹을 찾아주세요:
+1. 같은 의미의 다른 표현 (예: "비비드" = "비비드색감" = "강렬한 색감")
+2. 포함 관계 (예: "도시" ⊂ "도시풍경")
+3. 동의어/유사어 (예: "빈티지" ≈ "레트로")
+4. 한국어/영어 중복 (예: "풍경" = "landscape")
+
+반드시 아래 JSON 형식으로만 응답하세요. 병합이 필요 없으면 빈 배열을 반환하세요:
+{
+  "mergeGroups": [
+    {
+      "target": "병합 후 유지할 대표 태그명",
+      "sources": ["병합될 태그1", "병합될 태그2"],
+      "reason": "병합 이유 (한국어, 한 문장)"
+    }
+  ]
+}
+
+주의:
+- target은 가장 명확하고 보편적인 태그를 선택하세요
+- 사용 횟수가 많은 태그를 target으로 우선 선택하세요
+- 의미가 확실히 같거나 거의 같은 것만 병합하세요. 애매하면 병합하지 마세요.
+- JSON만 응답하세요. 설명이나 마크다운 없이.`;
+
+    try {
+      const client = new Anthropic({ apiKey: anthropicKey.value() });
+      const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const text = response.content[0].text.trim();
+      // JSON 파싱 (코드블록 제거)
+      const jsonStr = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+      const result = JSON.parse(jsonStr);
+
+      return { mergeGroups: result.mergeGroups || [] };
+    } catch (error) {
+      console.error("AI tag analysis failed:", error);
+      throw new HttpsError("internal", "AI 태그 분석 실패: " + error.message);
+    }
+  }
+);
+
 exports.deleteAuthUser = onCall(
   {
     region: "asia-northeast1",
