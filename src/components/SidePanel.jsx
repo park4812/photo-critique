@@ -234,6 +234,26 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
         </div>
       </div>
 
+      {photo.uploaderName && (
+        <div style={{
+          padding: '6px 14px',
+          fontSize: '12px',
+          color: 'var(--text-muted)',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+        }}>
+          <span style={{ opacity: 0.6 }}>👤</span>
+          <span>{photo.uploaderName}</span>
+          {photo.date && (
+            <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.5 }}>
+              {new Date(photo.date?.seconds ? photo.date.seconds * 1000 : photo.date).toLocaleDateString('ko-KR')}
+            </span>
+          )}
+        </div>
+      )}
+
       <img className="panel-image" src={photo.imageUrl} alt={photo.title} />
 
       {/* EXIF Info */}
