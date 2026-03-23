@@ -2,17 +2,24 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Photos: anyone can read, only authenticated users can write
     match /photos/{photoId} {
       allow read: if true;
-      allow create: if true; // For now. Add auth later: request.auth != null
+      allow create: if true;
       allow update: if true;
+      allow delete: if true;
 
-      // Comments subcollection
       match /comments/{commentId} {
         allow read: if true;
         allow create: if true;
+        allow delete: if true;
       }
+    }
+
+    match /albums/{albumId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
     }
   }
 }
