@@ -48,6 +48,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
   const [anonName, setAnonName] = useState('');
   const [anonToken, setAnonToken] = useState(() => getEditToken(contest.id));
   const [anonEntryId, setAnonEntryIdState] = useState(() => getAnonEntryId(contest.id));
+  const [justSubmitted, setJustSubmitted] = useState(false);
   const fileRef = useRef(null);
   const replaceFileRef = useRef(null);
 
@@ -68,7 +69,12 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
     return null;
   }, [entries, currentUser, anonToken, anonEntryId]);
 
-  const hasSubmitted = !!myEntry;
+  // Firestore 구독으로 내 엔트리가 도착하면 justSubmitted 해제
+  useEffect(() => {
+    if (myEntry && justSubmitted) setJustSubmitted(false);
+  }, [myEntry, justSubmitted]);
+
+  const hasSubmitted = !!myEntry || justSubmitted;
 
   // 엔트리 실시간 구독
   useEffect(() => {
@@ -139,6 +145,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
         setAnonToken(token);
         setAnonEntryIdState(entryId);
       }
+      setJustSubmitted(true);
       setPreview(null);
       setImageBlob(null);
       setAnonName('');
@@ -194,6 +201,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
     clearAnonData(contest.id);
     setAnonToken('');
     setAnonEntryIdState('');
+    setJustSubmitted(false);
   };
 
   // 사진 교체 파일 선택
