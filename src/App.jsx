@@ -263,6 +263,12 @@ function App() {
     await updateAlbum(albumId, data);
   };
 
+  const handleSetAlbumCover = async (albumId, photoId) => {
+    if (!USE_FIREBASE) return;
+    const { updateAlbum } = await import('./services/firebaseService');
+    await updateAlbum(albumId, { coverPhotoId: photoId });
+  };
+
   const handleAddPhotosToAlbum = async (albumId, photoIds) => {
     if (!USE_FIREBASE) return;
     const { addPhotoToAlbum } = await import('./services/firebaseService');
@@ -381,6 +387,7 @@ function App() {
           onAddPhotos={handleAddPhotosToAlbum}
           onDeleteAlbum={handleDeleteAlbum}
           onEditAlbum={handleEditAlbum}
+          onSetCover={handleSetAlbumCover}
           currentUser={currentUser}
           isAdmin={isAdmin}
         />

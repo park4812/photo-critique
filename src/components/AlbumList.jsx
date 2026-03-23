@@ -35,7 +35,11 @@ export default function AlbumList({ albums, photos, onAlbumClick, onCreateAlbum,
     const avgScore = albumPhotos.length > 0
       ? albumPhotos.reduce((sum, p) => sum + (p.totalScore || 0), 0) / albumPhotos.length
       : 0;
-    return { count: albumPhotos.length, avgScore, coverPhoto: albumPhotos[0] };
+    // coverPhotoId가 지정되어 있으면 해당 사진, 없으면 첫 번째 사진
+    const coverPhoto = album.coverPhotoId
+      ? albumPhotos.find(p => p.id === album.coverPhotoId) || albumPhotos[0]
+      : albumPhotos[0];
+    return { count: albumPhotos.length, avgScore, coverPhoto };
   };
 
   // Filter: show user's own albums + albums with public photos

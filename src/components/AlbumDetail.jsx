@@ -12,7 +12,7 @@ function getGrade(score) {
 export default function AlbumDetail({
   album, photos, allPhotos, onBack, onPhotoClick,
   onRemovePhoto, onAddPhotos, onDeleteAlbum, onEditAlbum,
-  currentUser, isAdmin,
+  onSetCover, currentUser, isAdmin,
 }) {
   const [showAddPicker, setShowAddPicker] = useState(false);
   const [selectedToAdd, setSelectedToAdd] = useState(new Set());
@@ -166,9 +166,11 @@ export default function AlbumDetail({
         <div className="album-photo-grid">
           {albumPhotos.map(photo => {
             const g = photo.totalScore > 0 ? getGrade(photo.totalScore) : null;
+            const isCover = album.coverPhotoId === photo.id;
             return (
-              <div key={photo.id} className="album-photo-card" onClick={() => onPhotoClick(photo)}>
+              <div key={photo.id} className={`album-photo-card ${isCover ? 'is-cover' : ''}`} onClick={() => onPhotoClick(photo)}>
                 <img src={photo.thumbnailUrl || photo.imageUrl} alt={photo.title} />
+                {isCover && <div className="album-cover-badge">대표</div>}
                 <div className="album-photo-overlay">
                   <span className="album-photo-title">{photo.title}</span>
                   {photo.totalScore > 0 && (
@@ -178,6 +180,16 @@ export default function AlbumDetail({
                     </span>
                   )}
                 </div>
+                {canEdit && !isCover && (
+                  <button
+                    className="album-photo-set-cover"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSetCover(album.id, photo.id);
+                    }}
+                    title="대표 사진으로 설정"
+                  >🖼</button>
+                )}
                 {canEdit && (isAdmin || photo.uploaderUid === currentUser?.uid || (!photo.uploaderUid && photo.uploaderName === (currentUser?.displayName || currentUser?.email))) && (
                   <button
                     className="album-photo-remove"
