@@ -447,7 +447,33 @@ export async function advanceContest(contestId, newStatus) {
   const update = { status: newStatus };
   if (newStatus === 'closed') update.closedAt = serverTimestamp();
   if (newStatus === 'voting') update.votingStartedAt = serverTimestamp();
+  // 결선에서 종료/재결선 시 runoff 필드 정리
+  if (newStatus === 'closed') {
+    update.runoffEntryIds = null;
+  }
   await updateDoc(doc(db, 'contests', contestId), update);
+}
+
+// 결선 투표 시작 (동점 엔트리만 투표 초기화)
+export async function startRunoff(contestId, entryIds) {
+  for (const eid of entryIds) {
+    const entryRef = doc(db, 'contests', contestId, 'entries', eid);
+    await updateDoc(entryRef, { votes: [], voteCount: 0 });
+  }
+  await updateDoc(doc(db, 'contests', contestId), {
+    status: 'runoff',
+    runoffEntryIds: entryIds,
+  });
+}
+
+// 관리자 직접 1위 선택
+export async function setContestWinner(contestId, winnerId) {
+  await updateDoc(doc(db, 'contests', contestId), {
+    winnerId,
+    status: 'closed',
+    closedAt: serverTimestamp(),
+    runoffEntryIds: null,
+  });
 }
 
 export async function deleteContest(contestId) {

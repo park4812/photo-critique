@@ -861,6 +861,151 @@ body {
   font-size: 14px;
 }
 
+/* ===== Contest Tie / Runoff ===== */
+.contest-tie-modal {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90vw;
+  text-align: center;
+}
+.contest-tie-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.contest-tie-desc {
+  font-size: 14px;
+  opacity: 0.7;
+  margin-bottom: 16px;
+}
+.contest-tie-entries {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.contest-tie-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.contest-tie-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+}
+.contest-tie-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+.contest-tie-votes {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.contest-tie-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.contest-tie-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.contest-tie-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-light, rgba(96,165,250,0.08));
+}
+.contest-tie-btn.runoff { color: #f97316; }
+.contest-tie-btn.runoff:hover { border-color: #f97316; background: rgba(249,115,22,0.08); }
+.contest-tie-btn.pick { color: #60a5fa; }
+.contest-tie-btn.pick:hover { border-color: #60a5fa; background: rgba(96,165,250,0.08); }
+.contest-tie-btn.time { color: #888; }
+.contest-tie-btn-desc {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.6;
+}
+.contest-tie-close {
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  padding: 4px 12px;
+}
+.contest-runoff-banner {
+  background: linear-gradient(135deg, rgba(249,115,22,0.12), rgba(251,191,36,0.12));
+  color: #f97316;
+  text-align: center;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.contest-entry-dimmed {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.contest-runoff-mark {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #f97316;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  z-index: 2;
+}
+.contest-entry-pickable {
+  outline: 3px dashed #60a5fa;
+  outline-offset: 2px;
+  animation: pickPulse 1.2s ease-in-out infinite;
+}
+@keyframes pickPulse {
+  0%, 100% { outline-color: #60a5fa; }
+  50% { outline-color: #fbbf24; }
+}
+.contest-picking-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(96,165,250,0.12), rgba(251,191,36,0.12));
+  color: #60a5fa;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.contest-admin-pick-tag {
+  font-size: 10px;
+  background: var(--accent);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
 /* ===== Debate View ===== */
 .debate-view { margin-bottom: 24px; }
 
