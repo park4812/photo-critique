@@ -274,7 +274,11 @@ function App() {
     if (sortBy === "totalScore") {
       result = [...result].sort((a, b) => b.totalScore - a.totalScore);
     } else if (sortBy === "date") {
-      result = [...result].sort((a, b) => new Date(b.date) - new Date(a.date));
+      result = [...result].sort((a, b) => {
+        const ta = a.createdAt?.seconds || new Date(a.date || 0).getTime() / 1000;
+        const tb = b.createdAt?.seconds || new Date(b.date || 0).getTime() / 1000;
+        return tb - ta;
+      });
     }
     return result;
   }, [photos, activeTag, sortBy, scoreFilter]);

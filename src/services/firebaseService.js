@@ -55,7 +55,7 @@ export async function fetchPhotos(filters = {}) {
  * onSnapshot이 이를 감지하여 UI에 실시간 반영됨.
  */
 export function subscribeToPhotos(callback) {
-  const q = query(collection(db, 'photos'), orderBy('date', 'desc'));
+  const q = query(collection(db, 'photos'), orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snapshot) => {
     const photos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     callback(photos);

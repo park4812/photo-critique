@@ -371,7 +371,7 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
 
       <div className="panel-content">
         {/* AI Status Banner */}
-        {isPending && (
+        {isPending && photo.debateStatus !== 'processing' && (
           <div style={{
             padding: '10px 14px',
             background: 'rgba(200, 168, 110, 0.1)',
