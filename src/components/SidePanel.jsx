@@ -169,6 +169,20 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
   const [showGuide, setShowGuide] = useState(false);
   const [exifSettings, setExifSettings] = useState(getExifSettings);
   const [showExifConfig, setShowExifConfig] = useState(false);
+  const [liveComments, setLiveComments] = useState([]);
+
+  // 댓글 서브컬렉션 실시간 구독
+  useEffect(() => {
+    if (!photo?.id) { setLiveComments([]); return; }
+    let unsub;
+    (async () => {
+      const { subscribeToComments } = await import('../services/firebaseService');
+      unsub = subscribeToComments(photo.id, (comments) => {
+        setLiveComments(comments);
+      });
+    })();
+    return () => { if (unsub) unsub(); };
+  }, [photo?.id]);
 
   const toggleExifField = (key) => {
     const next = { ...exifSettings, [key]: !exifSettings[key] };
@@ -178,7 +192,7 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
 
   if (!photo) return <div className={`side-panel ${isOpen ? 'open' : ''}`}></div>;
 
-  const comments = photo.comments || [];
+  const comments = liveComments.length > 0 ? liveComments : (photo.comments || []);
   const aiStatus = photo.aiStatus || (photo.aiEvaluated ? 'done' : 'none');
   const isPending = aiStatus === 'pending' || aiStatus === 'processing';
   const hasDebate = photo.debate || photo.individualEvaluations;
@@ -655,7 +669,7 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
                 <p className="comment-text">{c.text}</p>
               </div>
             ))}
-            <CommentForm photoId={photo.id} onSubmit={(comment) => onAddComment(photo.id, comment)} />
+            <CommentForm photoId={photo.id} onSubmit={(comment) => onAddComment(photo.id, comment)} currentUser={currentUser} />
           </div>
         )}
       </div>

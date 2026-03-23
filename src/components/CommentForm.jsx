@@ -109,8 +109,8 @@ function StarDisplay({ value = 0, size = 14 }) {
 
 export { StarDisplay };
 
-export default function CommentForm({ photoId, onSubmit }) {
-  const [author, setAuthor] = useState('');
+export default function CommentForm({ photoId, onSubmit, currentUser }) {
+  const [author, setAuthor] = useState(currentUser?.displayName || currentUser?.email || '');
   const [text, setText] = useState('');
   const [overallRating, setOverallRating] = useState(0);
   const [showDetailScores, setShowDetailScores] = useState(false);
@@ -122,13 +122,13 @@ export default function CommentForm({ photoId, onSubmit }) {
 
     onSubmit({
       author: author.trim(),
+      authorUid: currentUser?.uid || '',
       text: text.trim(),
       overallRating,
       scores: showDetailScores ? scores : {},
       date: new Date().toISOString().split('T')[0]
     });
 
-    setAuthor('');
     setText('');
     setOverallRating(0);
     setScores({});
@@ -144,6 +144,8 @@ export default function CommentForm({ photoId, onSubmit }) {
         placeholder="이름"
         value={author}
         onChange={e => setAuthor(e.target.value)}
+        readOnly={!!currentUser}
+        style={currentUser ? { opacity: 0.6, cursor: 'default' } : {}}
       />
 
       <textarea
