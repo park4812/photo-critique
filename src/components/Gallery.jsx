@@ -55,12 +55,16 @@ export default function Gallery({ photos, onPhotoClick, isAdmin, onDeletePhoto }
           />
           <div className="photo-card-overlay">
             <div className="mini-scores">
-              {Object.entries(photo.scores).slice(0, 4).map(([key, val]) => (
-                <div key={key} className="mini-score-item">
-                  <span className="mini-score-label">{scoreLabels[key]?.ko}</span>
-                  <span style={{ color: getScoreColor(val), fontWeight: 600 }}>{val}</span>
-                </div>
-              ))}
+              {Object.keys(scoreLabels).slice(0, 4).map(key => {
+                const val = photo.scores[key];
+                if (val == null) return null;
+                return (
+                  <div key={key} className="mini-score-item">
+                    <span className="mini-score-label">{scoreLabels[key]?.ko}</span>
+                    <span style={{ color: getScoreColor(val), fontWeight: 600 }}>{val}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div className="photo-card-info">
@@ -75,6 +79,14 @@ export default function Gallery({ photos, onPhotoClick, isAdmin, onDeletePhoto }
                 }
               </span>
               <span className={`photo-card-score ${getScoreClass(photo.totalScore)}`}>
+                {photo.aiModel === 'multi-ai-debate' && (
+                  <span style={{
+                    fontSize: '9px', padding: '1px 4px',
+                    background: 'rgba(162, 155, 254, 0.2)',
+                    borderRadius: '3px', color: '#a29bfe',
+                    marginRight: '4px', fontWeight: 600
+                  }}>3-AI</span>
+                )}
                 <span className="score-dot"></span>
                 {photo.totalScore.toFixed(1)}
               </span>

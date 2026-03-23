@@ -198,9 +198,11 @@ body {
   transition: transform 0.2s, box-shadow 0.2s;
   border: 1px solid var(--border);
 }
-.photo-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+@media (hover: hover) {
+  .photo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
 }
 
 .photo-card-img {
@@ -225,7 +227,9 @@ body {
   justify-content: flex-end;
   padding: 16px;
 }
-.photo-card:hover .photo-card-overlay { opacity: 1; }
+@media (hover: hover) {
+  .photo-card:hover .photo-card-overlay { opacity: 1; }
+}
 
 .photo-card-info {
   padding: 12px 14px;
