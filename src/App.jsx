@@ -10,6 +10,8 @@ import AdminPanel from './components/AdminPanel';
 import AlbumList from './components/AlbumList';
 import AlbumDetail from './components/AlbumDetail';
 import TagManager from './components/TagManager';
+import ContestList from './components/ContestList';
+import ContestDetail from './components/ContestDetail';
 import './App.css';
 
 // Firebase is configured
@@ -36,6 +38,7 @@ function App() {
   const getInitialView = () => {
     const hash = window.location.hash.replace('#', '');
     if (hash.startsWith('albums')) return 'albums';
+    if (hash.startsWith('contests')) return 'contests';
     return 'gallery';
   };
   const getInitialAlbumId = () => {
@@ -43,29 +46,50 @@ function App() {
     if (hash.startsWith('albums/')) return hash.split('/')[1];
     return null;
   };
+  const getInitialContestId = () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash.startsWith('contests/')) return hash.split('/')[1];
+    return null;
+  };
 
   const [activeView, setActiveView] = useState(getInitialView);
   const [albums, setAlbums] = useState([]);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [initialAlbumId] = useState(getInitialAlbumId);
+  const [contests, setContests] = useState([]);
+  const [selectedContest, setSelectedContest] = useState(null);
+  const [initialContestId] = useState(getInitialContestId);
 
   // URL hash 동기화
   useEffect(() => {
-    const newHash = selectedAlbum
-      ? `#albums/${selectedAlbum.id}`
-      : activeView === 'albums'
-        ? '#albums'
-        : '#gallery';
+    let newHash;
+    if (selectedAlbum) newHash = `#albums/${selectedAlbum.id}`;
+    else if (selectedContest) newHash = `#contests/${selectedContest.id}`;
+    else if (activeView === 'albums') newHash = '#albums';
+    else if (activeView === 'contests') newHash = '#contests';
+    else newHash = '#gallery';
     if (window.location.hash !== newHash) {
       window.history.replaceState(null, '', newHash);
     }
-  }, [activeView, selectedAlbum]);
+  }, [activeView, selectedAlbum, selectedContest]);
 
   // 브라우저 뒤로/앞으로 버튼 처리
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash.startsWith('albums/')) {
+      if (hash.startsWith('contests/')) {
+        const contestId = hash.split('/')[1];
+        setActiveView('contests');
+        setSelectedContest(prev => {
+          if (prev?.id === contestId) return prev;
+          return contests.find(c => c.id === contestId) || prev;
+        });
+        setSelectedAlbum(null);
+      } else if (hash === 'contests') {
+        setActiveView('contests');
+        setSelectedContest(null);
+        setSelectedAlbum(null);
+      } else if (hash.startsWith('albums/')) {
         const albumId = hash.split('/')[1];
         setActiveView('albums');
         setSelectedAlbum(prev => {
@@ -73,17 +97,20 @@ function App() {
           const found = albums.find(a => a.id === albumId);
           return found || prev;
         });
+        setSelectedContest(null);
       } else if (hash === 'albums') {
         setActiveView('albums');
         setSelectedAlbum(null);
+        setSelectedContest(null);
       } else {
         setActiveView('gallery');
         setSelectedAlbum(null);
+        setSelectedContest(null);
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [albums]);
+  }, [albums, contests]);
 
   // Firebase Auth 상태 감시
   useEffect(() => {
@@ -128,6 +155,27 @@ function App() {
           }
           if (!prev) return prev;
           return firebaseAlbums.find(a => a.id === prev.id) || prev;
+        });
+      });
+    })();
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, []);
+
+  // Firebase 콘테스트 실시간 구독
+  useEffect(() => {
+    if (!USE_FIREBASE) return;
+    let unsubscribe;
+    (async () => {
+      const { subscribeToContests } = await import('./services/firebaseService');
+      unsubscribe = subscribeToContests((firebaseContests) => {
+        setContests(firebaseContests);
+        setSelectedContest(prev => {
+          if (!prev && initialContestId) {
+            const found = firebaseContests.find(c => c.id === initialContestId);
+            if (found) return found;
+          }
+          if (!prev) return prev;
+          return firebaseContests.find(c => c.id === prev.id) || prev;
         });
       });
     })();
@@ -285,6 +333,13 @@ function App() {
     await removePhotoFromAlbum(albumId, photoId);
   };
 
+  // ===== Contest handlers =====
+  const handleCreateContest = async (data) => {
+    if (!USE_FIREBASE) return;
+    const { createContest } = await import('./services/firebaseService');
+    await createContest(data);
+  };
+
   const handleAdminToggle = () => {
     if (isAdmin) {
       setIsAdmin(false);
@@ -342,12 +397,16 @@ function App() {
       <div className="view-tabs">
         <button
           className={`view-tab ${activeView === 'gallery' ? 'active' : ''}`}
-          onClick={() => { setActiveView('gallery'); setSelectedAlbum(null); }}
+          onClick={() => { setActiveView('gallery'); setSelectedAlbum(null); setSelectedContest(null); }}
         >갤러리</button>
         <button
           className={`view-tab ${activeView === 'albums' ? 'active' : ''}`}
-          onClick={() => { setActiveView('albums'); setSelectedAlbum(null); }}
+          onClick={() => { setActiveView('albums'); setSelectedAlbum(null); setSelectedContest(null); }}
         >앨범</button>
+        <button
+          className={`view-tab ${activeView === 'contests' ? 'active' : ''}`}
+          onClick={() => { setActiveView('contests'); setSelectedAlbum(null); setSelectedContest(null); }}
+        >투표</button>
       </div>
 
       {activeView === 'gallery' && (
@@ -395,6 +454,25 @@ function App() {
           onDeleteAlbum={handleDeleteAlbum}
           onEditAlbum={handleEditAlbum}
           onSetCover={handleSetAlbumCover}
+          currentUser={currentUser}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {activeView === 'contests' && !selectedContest && (
+        <ContestList
+          contests={contests}
+          onContestClick={(c) => setSelectedContest(c)}
+          onCreateContest={handleCreateContest}
+          isAdmin={isAdmin}
+          currentUser={currentUser}
+        />
+      )}
+
+      {activeView === 'contests' && selectedContest && (
+        <ContestDetail
+          contest={selectedContest}
+          onBack={() => setSelectedContest(null)}
           currentUser={currentUser}
           isAdmin={isAdmin}
         />

@@ -379,6 +379,140 @@ export function subscribeToAlbum(albumId, callback) {
   });
 }
 
+// ===== Contests (투표) =====
+
+export function subscribeToContests(callback) {
+  const q = query(collection(db, 'contests'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+  });
+}
+
+export async function createContest(data) {
+  const docRef = await addDoc(collection(db, 'contests'), {
+    ...data,
+    status: 'submitting', // submitting → voting → closed
+    entryCount: 0,
+    createdAt: serverTimestamp(),
+    closedAt: null,
+  });
+  return docRef.id;
+}
+
+export async function advanceContest(contestId, newStatus) {
+  const update = { status: newStatus };
+  if (newStatus === 'closed') update.closedAt = serverTimestamp();
+  if (newStatus === 'voting') update.votingStartedAt = serverTimestamp();
+  await updateDoc(doc(db, 'contests', contestId), update);
+}
+
+export async function deleteContest(contestId) {
+  // entries 서브컬렉션 삭제
+  const entriesRef = collection(db, 'contests', contestId, 'entries');
+  const snap = await getDocs(entriesRef);
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  // Storage 파일 삭제
+  try {
+    const folderRef = ref(storage, `contests/${contestId}`);
+    const fileList = await listAll(folderRef);
+    await Promise.all(fileList.items.map(item => deleteObject(item)));
+  } catch (e) { console.warn('Contest storage cleanup:', e); }
+  await deleteDoc(doc(db, 'contests', contestId));
+}
+
+export function subscribeToEntries(contestId, callback) {
+  const q = query(collection(db, 'contests', contestId, 'entries'), orderBy('createdAt', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+  });
+}
+
+export async function submitEntry(contestId, imageBlob, uploaderUid, uploaderName) {
+  // 이미 출품했는지 확인
+  const q = query(
+    collection(db, 'contests', contestId, 'entries'),
+    where('uploaderUid', '==', uploaderUid)
+  );
+  const existing = await getDocs(q);
+  if (!existing.empty) throw new Error('이미 이 콘테스트에 출품하셨습니다.');
+
+  // 엔트리 문서 생성
+  const entryRef = doc(collection(db, 'contests', contestId, 'entries'));
+  const entryId = entryRef.id;
+
+  // Storage에 이미지 업로드
+  const storageRef = ref(storage, `contests/${contestId}/${entryId}.jpg`);
+  await uploadBytes(storageRef, imageBlob, { contentType: 'image/jpeg' });
+  const imageUrl = await getDownloadURL(storageRef);
+
+  await setDoc(entryRef, {
+    imageUrl,
+    uploaderUid,
+    uploaderName,
+    votes: [],
+    voteCount: 0,
+    createdAt: serverTimestamp(),
+  });
+
+  // 콘테스트 entryCount 증가
+  const contestRef = doc(db, 'contests', contestId);
+  const contestSnap = await getDoc(contestRef);
+  if (contestSnap.exists()) {
+    await updateDoc(contestRef, {
+      entryCount: (contestSnap.data().entryCount || 0) + 1,
+    });
+  }
+
+  return entryId;
+}
+
+// 출품작 사진 교체 (접수 단계에서만)
+export async function replaceEntry(contestId, entryId, newImageBlob) {
+  // 기존 이미지 덮어쓰기
+  const storageRef = ref(storage, `contests/${contestId}/${entryId}.jpg`);
+  await uploadBytes(storageRef, newImageBlob, { contentType: 'image/jpeg' });
+  const imageUrl = await getDownloadURL(storageRef);
+
+  // 엔트리 문서 업데이트
+  const entryRef = doc(db, 'contests', contestId, 'entries', entryId);
+  await updateDoc(entryRef, { imageUrl, updatedAt: serverTimestamp() });
+}
+
+export async function voteEntry(contestId, entryId, voterUid) {
+  const entryRef = doc(db, 'contests', contestId, 'entries', entryId);
+  const entrySnap = await getDoc(entryRef);
+  if (!entrySnap.exists()) return;
+  const data = entrySnap.data();
+  const votes = data.votes || [];
+
+  if (votes.includes(voterUid)) {
+    // 이미 투표함 → 취소
+    const updated = votes.filter(v => v !== voterUid);
+    await updateDoc(entryRef, { votes: updated, voteCount: updated.length });
+  } else {
+    // 투표
+    const updated = [...votes, voterUid];
+    await updateDoc(entryRef, { votes: updated, voteCount: updated.length });
+  }
+}
+
+export async function deleteEntry(contestId, entryId) {
+  // Storage 삭제
+  try {
+    const storageRef = ref(storage, `contests/${contestId}/${entryId}.jpg`);
+    await deleteObject(storageRef);
+  } catch (e) { console.warn('Entry image cleanup:', e); }
+  await deleteDoc(doc(db, 'contests', contestId, 'entries', entryId));
+  // entryCount 감소
+  const contestRef = doc(db, 'contests', contestId);
+  const contestSnap = await getDoc(contestRef);
+  if (contestSnap.exists()) {
+    await updateDoc(contestRef, {
+      entryCount: Math.max(0, (contestSnap.data().entryCount || 0) - 1),
+    });
+  }
+}
+
 // ===== Legacy (for sample data mode) =====
 
 export async function addPhoto(photoData) {

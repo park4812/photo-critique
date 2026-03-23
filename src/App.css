@@ -1889,3 +1889,309 @@ body {
   font-weight: 600;
   flex-shrink: 0;
 }
+
+/* ===== Contest (투표) ===== */
+.contest-list-container, .contest-detail-container {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.contest-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.contest-list-title { font-size: 20px; font-weight: 700; color: var(--text); }
+.contest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.contest-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.contest-card:hover { transform: translateY(-2px); border-color: var(--border-light); }
+.contest-card-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.contest-card-status.submitting { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+.contest-card-status.voting { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+.contest-card-status.closed { background: rgba(136,136,136,0.15); color: #888; }
+.contest-card-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.contest-card-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+.contest-card-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 6px; }
+.contest-section { margin-bottom: 24px; }
+
+/* Contest Detail */
+.contest-detail-header { margin-bottom: 20px; }
+.contest-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.contest-status-badge {
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Phase bar */
+.contest-admin-guide {
+  margin-top: 12px;
+}
+.contest-phase-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.contest-phase {
+  padding: 4px 14px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+}
+.contest-phase.active {
+  background: rgba(200, 168, 110, 0.2);
+  color: var(--accent);
+  border: 1px solid rgba(200, 168, 110, 0.4);
+}
+.contest-phase.done {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+}
+.contest-phase-arrow { color: var(--text-muted); font-size: 12px; }
+
+/* Submit area */
+.contest-submit-area {
+  margin-bottom: 20px;
+}
+.contest-drop-zone {
+  border: 2px dashed var(--border-light);
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+.contest-drop-zone:hover { border-color: var(--accent); }
+.contest-preview-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.contest-preview-img {
+  max-width: 300px;
+  max-height: 300px;
+  border-radius: 10px;
+  object-fit: contain;
+}
+.contest-preview-actions { display: flex; gap: 8px; }
+.contest-submitted-badge {
+  padding: 12px 16px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 10px;
+  color: #4ade80;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Waiting (submitting 단계) */
+.contest-waiting {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+.contest-my-preview {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.contest-my-thumb {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.contest-my-badge {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  color: #f87171;
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.contest-my-badge:hover { background: rgba(248, 113, 113, 0.2); }
+.contest-my-badge.change {
+  background: rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+}
+.contest-my-badge.change:hover { background: rgba(96, 165, 250, 0.2); }
+.contest-replace-area { text-align: center; }
+.contest-replace-compare {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.contest-replace-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Entries grid */
+.contest-entries-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.contest-entries-grid.results {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.contest-entry {
+  position: relative;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.15s;
+}
+.contest-entry:hover { transform: translateY(-2px); }
+
+/* 1,2,3등 프레임 */
+.contest-frame-gold {
+  border: 2px solid #e2b340;
+  box-shadow: 0 0 20px rgba(226, 179, 64, 0.3), inset 0 0 20px rgba(226, 179, 64, 0.05);
+}
+.contest-frame-silver {
+  border: 2px solid #b0b0b0;
+  box-shadow: 0 0 16px rgba(176, 176, 176, 0.25);
+}
+.contest-frame-bronze {
+  border: 2px solid #cd7f32;
+  box-shadow: 0 0 14px rgba(205, 127, 50, 0.2);
+}
+.contest-frame-normal { border-color: var(--border); }
+
+/* Rank badge */
+.contest-rank-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  border-radius: 16px;
+  z-index: 2;
+}
+.contest-rank-badge.normal { background: rgba(0,0,0,0.5); }
+.contest-rank-emoji { font-size: 16px; }
+.contest-rank-label { font-size: 12px; font-weight: 700; color: #fff; }
+
+/* Entry image */
+.contest-entry-img-wrap {
+  cursor: pointer;
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+.contest-entry-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.2s;
+}
+.contest-entry:hover .contest-entry-img { transform: scale(1.03); }
+
+/* Entry info */
+.contest-entry-info {
+  padding: 10px 12px;
+}
+.contest-entry-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.contest-entry-vote-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.contest-vote-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.contest-vote-btn:hover { background: rgba(255,255,255,0.1); }
+.contest-vote-btn.voted {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #f87171;
+}
+.contest-entry-votes {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* 1등 카드 크게 */
+.contest-entries-grid.results .contest-frame-gold {
+  grid-column: span 2;
+}
+.contest-entries-grid.results .contest-frame-gold .contest-entry-img-wrap {
+  aspect-ratio: 16/10;
+}
+
+@media (max-width: 640px) {
+  .contest-grid { grid-template-columns: 1fr; }
+  .contest-entries-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .contest-entries-grid.results { grid-template-columns: 1fr; }
+  .contest-entries-grid.results .contest-frame-gold { grid-column: span 1; }
+  .contest-entries-grid.results .contest-entry-img-wrap { aspect-ratio: 4/3; }
+  .contest-list-container, .contest-detail-container { padding: 16px 12px; }
+  .contest-phase-bar { font-size: 11px; }
+  .contest-my-thumb { width: 180px; height: 180px; }
+  .contest-preview-img { max-width: 90vw; max-height: 50vh; }
+  .contest-drop-zone { padding: 48px 16px; }
+  .contest-drop-zone div:first-child { font-size: 48px !important; }
+  .contest-submit-area { margin: 0 -4px; }
+  .contest-vote-btn { padding: 8px 16px; font-size: 16px; }
+  .contest-entry-info { padding: 8px 10px; }
+  .contest-entry-name { font-size: 14px; }
+  .contest-entry-votes { font-size: 14px; }
+}
