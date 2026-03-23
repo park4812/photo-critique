@@ -227,6 +227,74 @@ export async function reTagAllPhotos() {
   return result.data;
 }
 
+// ===== Albums =====
+
+export function subscribeToAlbums(callback) {
+  const q = query(collection(db, 'albums'), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const albums = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(albums);
+  });
+}
+
+export async function createAlbum(albumData) {
+  const docRef = await addDoc(collection(db, 'albums'), {
+    ...albumData,
+    photoIds: [],
+    photoCount: 0,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function updateAlbum(albumId, data) {
+  await updateDoc(doc(db, 'albums', albumId), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteAlbum(albumId) {
+  await deleteDoc(doc(db, 'albums', albumId));
+}
+
+export async function addPhotoToAlbum(albumId, photoId) {
+  const albumRef = doc(db, 'albums', albumId);
+  const albumSnap = await getDoc(albumRef);
+  if (!albumSnap.exists()) throw new Error('앨범을 찾을 수 없습니다');
+  const data = albumSnap.data();
+  const photoIds = data.photoIds || [];
+  if (photoIds.includes(photoId)) return; // already added
+  const updated = [...photoIds, photoId];
+  await updateDoc(albumRef, {
+    photoIds: updated,
+    photoCount: updated.length,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function removePhotoFromAlbum(albumId, photoId) {
+  const albumRef = doc(db, 'albums', albumId);
+  const albumSnap = await getDoc(albumRef);
+  if (!albumSnap.exists()) return;
+  const data = albumSnap.data();
+  const updated = (data.photoIds || []).filter(id => id !== photoId);
+  await updateDoc(albumRef, {
+    photoIds: updated,
+    photoCount: updated.length,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export function subscribeToAlbum(albumId, callback) {
+  return onSnapshot(doc(db, 'albums', albumId), (snapshot) => {
+    if (snapshot.exists()) {
+      callback({ id: snapshot.id, ...snapshot.data() });
+    }
+  });
+}
+
 // ===== Legacy (for sample data mode) =====
 
 export async function addPhoto(photoData) {

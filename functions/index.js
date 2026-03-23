@@ -70,6 +70,46 @@ aiTags는 이 사진의 장르, 주제, 분위기, 스타일을 설명하는 한
 예시: ["인물", "자연광", "빈티지"] / ["스트릿", "야간", "네온"] / ["풍경", "미니멀", "흑백"]
 한국어 1~3단어로 작성하세요.`;
 
+// ============================================================
+// Role-based prompts for each AI (debate mode)
+// ============================================================
+const ROLE_PREFIX_CLAUDE = `당신은 "기술 분석가" 역할의 사진 크리틱입니다.
+당신의 전문 분야는 카메라 기술과 촬영 테크닉입니다.
+평가 시 다음을 특히 중시하세요:
+- composition(구도): 삼분법, 리딩라인, 프레이밍 등 구도 기법의 정확성
+- lighting(노출/빛): 히스토그램, 다이나믹레인지, 조명 방향과 질
+- focus(초점/심도): 피사계 심도 활용, 초점 정확도, 보케 품질
+- postProcessing(후보정): 화이트밸런스, 노이즈 처리, 샤프닝 적절성
+기술적으로 엄격하게 평가하되, 기술이 표현에 기여하는지도 함께 판단하세요.
+references에서는 테크닉이 뛰어난 작가를 추천하세요.
+`;
+
+const ROLE_PREFIX_GPT = `당신은 "감성 평론가" 역할의 사진 크리틱입니다.
+당신의 전문 분야는 사진이 전달하는 감정과 이야기입니다.
+평가 시 다음을 특히 중시하세요:
+- storytelling(스토리텔링): 사진이 전달하는 서사, 감정, 메시지의 깊이
+- color(색감): 색채가 만들어내는 분위기와 감정적 효과
+- timing(타이밍): 결정적 순간의 포착, 감정이 극대화되는 시점
+- composition(구도): 시선 유도와 감정 전달에 구도가 기여하는 정도
+사진이 보는 사람에게 어떤 감정을 불러일으키는지를 중심으로 평가하세요.
+references에서는 감성적/서사적으로 뛰어난 작가를 추천하세요.
+`;
+
+const ROLE_PREFIX_GEMINI = `당신은 "상업 편집자" 역할의 사진 크리틱입니다.
+당신의 전문 분야는 사진의 실용적 가치와 상업적 완성도입니다.
+평가 시 다음을 특히 중시하세요:
+- postProcessing(후보정): 최종 결과물의 완성도, 인쇄/웹 적합성
+- color(색감): 트렌디한 색보정, 브랜드/매거진에 어울리는 톤
+- composition(구도): 상업적 활용도 (크롭, 텍스트 배치 공간 등)
+- lighting(노출/빛): 제품/인물이 돋보이는 조명의 효과성
+포트폴리오, SNS, 매거진, 공모전 등에 바로 쓸 수 있는 수준인지를 기준으로 평가하세요.
+references에서는 상업/에디토리얼 분야에서 활동하는 작가를 추천하세요.
+`;
+
+function buildRolePrompt(rolePrefix) {
+  return rolePrefix + '\n' + EVAL_PROMPT;
+}
+
 function buildDebatePrompt(evaluations) {
   return `당신은 사진 평가 토론의 진행자입니다.
 
@@ -148,7 +188,7 @@ aiTags는 사진의 장르, 주제, 분위기를 설명하는 한국어 태그 2
 // ============================================================
 // AI Provider calls
 // ============================================================
-async function callClaude(base64, apiKey) {
+async function callClaude(base64, apiKey, prompt = null) {
   const client = new Anthropic({ apiKey });
   const message = await client.messages.create({
     model: "claude-sonnet-4-20250514",
@@ -157,14 +197,14 @@ async function callClaude(base64, apiKey) {
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-        { type: "text", text: EVAL_PROMPT },
+        { type: "text", text: prompt || EVAL_PROMPT },
       ],
     }],
   });
   return parseAIResponse(message.content[0].text);
 }
 
-async function callGPT(base64, apiKey) {
+async function callGPT(base64, apiKey, prompt = null) {
   const client = new OpenAI({ apiKey });
   const response = await client.chat.completions.create({
     model: "gpt-4o",
@@ -173,21 +213,21 @@ async function callGPT(base64, apiKey) {
       role: "user",
       content: [
         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "high" } },
-        { type: "text", text: EVAL_PROMPT },
+        { type: "text", text: prompt || EVAL_PROMPT },
       ],
     }],
   });
   return parseAIResponse(response.choices[0].message.content);
 }
 
-async function callGemini(base64, apiKey, retries = 2) {
+async function callGemini(base64, apiKey, retries = 2, prompt = null) {
   // Gemini REST API (v1beta) — updated to gemini-2.5-flash
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const body = {
     contents: [{
       parts: [
         { inlineData: { mimeType: "image/jpeg", data: base64 } },
-        { text: EVAL_PROMPT },
+        { text: prompt || EVAL_PROMPT },
       ],
     }],
     generationConfig: { maxOutputTokens: 8192 },
@@ -307,9 +347,9 @@ exports.debateEvaluatePhoto = onCall(
 
       // Round 1: 3 AI independently evaluate
       const [claudeResult, gptResult, geminiResult] = await Promise.allSettled([
-        callClaude(base64, anthropicKey.value()),
-        callGPT(base64, openaiKey.value()),
-        callGemini(base64, geminiKey.value()),
+        callClaude(base64, anthropicKey.value(), buildRolePrompt(ROLE_PREFIX_CLAUDE)),
+        callGPT(base64, openaiKey.value(), buildRolePrompt(ROLE_PREFIX_GPT)),
+        callGemini(base64, geminiKey.value(), 2, buildRolePrompt(ROLE_PREFIX_GEMINI)),
       ]);
 
       const evaluations = {

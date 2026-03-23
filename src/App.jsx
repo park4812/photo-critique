@@ -7,6 +7,8 @@ import UploadModal from './components/UploadModal';
 import FilterBar from './components/FilterBar';
 import AuthModal from './components/AuthModal';
 import AdminPanel from './components/AdminPanel';
+import AlbumList from './components/AlbumList';
+import AlbumDetail from './components/AlbumDetail';
 import './App.css';
 
 // Firebase is configured
@@ -28,6 +30,9 @@ function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [activeView, setActiveView] = useState('gallery'); // 'gallery' | 'albums'
+  const [albums, setAlbums] = useState([]);
+  const [selectedAlbum, setSelectedAlbum] = useState(null);
 
   // Firebase Auth 상태 감시
   useEffect(() => {
@@ -50,6 +55,24 @@ function App() {
           if (!prev) return prev;
           const updated = firebasePhotos.find(p => p.id === prev.id);
           return updated || prev;
+        });
+      });
+    })();
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, []);
+
+  // Firebase 앨범 실시간 구독
+  useEffect(() => {
+    if (!USE_FIREBASE) return;
+    let unsubscribe;
+    (async () => {
+      const { subscribeToAlbums } = await import('./services/firebaseService');
+      unsubscribe = subscribeToAlbums((firebaseAlbums) => {
+        setAlbums(firebaseAlbums);
+        // Update selected album if it changed
+        setSelectedAlbum(prev => {
+          if (!prev) return prev;
+          return firebaseAlbums.find(a => a.id === prev.id) || prev;
         });
       });
     })();
@@ -168,6 +191,39 @@ function App() {
     }
   };
 
+  // ===== Album handlers =====
+  const handleCreateAlbum = async (albumData) => {
+    if (!USE_FIREBASE) return;
+    const { createAlbum } = await import('./services/firebaseService');
+    await createAlbum(albumData);
+  };
+
+  const handleDeleteAlbum = async (albumId) => {
+    if (!USE_FIREBASE) return;
+    const { deleteAlbum } = await import('./services/firebaseService');
+    await deleteAlbum(albumId);
+  };
+
+  const handleEditAlbum = async (albumId, data) => {
+    if (!USE_FIREBASE) return;
+    const { updateAlbum } = await import('./services/firebaseService');
+    await updateAlbum(albumId, data);
+  };
+
+  const handleAddPhotosToAlbum = async (albumId, photoIds) => {
+    if (!USE_FIREBASE) return;
+    const { addPhotoToAlbum } = await import('./services/firebaseService');
+    for (const pid of photoIds) {
+      await addPhotoToAlbum(albumId, pid);
+    }
+  };
+
+  const handleRemovePhotoFromAlbum = async (albumId, photoId) => {
+    if (!USE_FIREBASE) return;
+    const { removePhotoFromAlbum } = await import('./services/firebaseService');
+    await removePhotoFromAlbum(albumId, photoId);
+  };
+
   const handleAdminToggle = () => {
     if (isAdmin) {
       setIsAdmin(false);
@@ -216,23 +272,66 @@ function App() {
         </div>
       </header>
 
-      <FilterBar
-        categories={allTags}
-        activeCategory={activeTag}
-        onCategoryChange={setActiveTag}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        scoreFilter={scoreFilter}
-        onScoreFilterChange={setScoreFilter}
-        photoCount={filteredPhotos.length}
-      />
+      {/* View Tabs */}
+      <div className="view-tabs">
+        <button
+          className={`view-tab ${activeView === 'gallery' ? 'active' : ''}`}
+          onClick={() => { setActiveView('gallery'); setSelectedAlbum(null); }}
+        >갤러리</button>
+        <button
+          className={`view-tab ${activeView === 'albums' ? 'active' : ''}`}
+          onClick={() => { setActiveView('albums'); setSelectedAlbum(null); }}
+        >앨범</button>
+      </div>
 
-      <Gallery
-        photos={filteredPhotos}
-        onPhotoClick={handlePhotoClick}
-        isAdmin={isAdmin}
-        onDeletePhoto={handleDeletePhoto}
-      />
+      {activeView === 'gallery' && (
+        <>
+          <FilterBar
+            categories={allTags}
+            activeCategory={activeTag}
+            onCategoryChange={setActiveTag}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            scoreFilter={scoreFilter}
+            onScoreFilterChange={setScoreFilter}
+            photoCount={filteredPhotos.length}
+          />
+
+          <Gallery
+            photos={filteredPhotos}
+            onPhotoClick={handlePhotoClick}
+            isAdmin={isAdmin}
+            onDeletePhoto={handleDeletePhoto}
+          />
+        </>
+      )}
+
+      {activeView === 'albums' && !selectedAlbum && (
+        <AlbumList
+          albums={albums}
+          photos={photos}
+          onAlbumClick={(album) => setSelectedAlbum(album)}
+          onCreateAlbum={handleCreateAlbum}
+          currentUser={currentUser}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {activeView === 'albums' && selectedAlbum && (
+        <AlbumDetail
+          album={selectedAlbum}
+          photos={photos}
+          allPhotos={photos}
+          onBack={() => setSelectedAlbum(null)}
+          onPhotoClick={handlePhotoClick}
+          onRemovePhoto={handleRemovePhotoFromAlbum}
+          onAddPhotos={handleAddPhotosToAlbum}
+          onDeleteAlbum={handleDeleteAlbum}
+          onEditAlbum={handleEditAlbum}
+          currentUser={currentUser}
+          isAdmin={isAdmin}
+        />
+      )}
 
       <SidePanel
         photo={selectedPhoto}
