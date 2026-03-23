@@ -428,7 +428,7 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
           }}>
             <div style={{ fontSize: '13px', fontWeight: 600, color: '#f87171' }}>AI 평가 실패</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>{photo.aiError}</div>
-            {onReEvaluate && isMyPhoto && (
+            {onReEvaluate && isAdmin && (
               <button onClick={handleReEvaluate} disabled={reEvalLoading}
                 style={{ padding: '6px 12px', fontSize: '12px', fontWeight: 600, background: 'var(--accent)', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
                 {reEvalLoading ? '재평가 중...' : '재평가'}
@@ -477,7 +477,7 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
                 </span>
               </div>
             </div>
-            {photo.aiEvaluated && !isPending && isMyPhoto && (
+            {photo.aiEvaluated && !isPending && isAdmin && (
               <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
                 {onDebateEvaluate && !isDebateModel && photo.debateStatus !== 'processing' && (
                   <button onClick={handleDebateEvaluate} disabled={debateLoading}

@@ -280,9 +280,9 @@ async function callDebateModerator(evaluations, apiKey) {
 exports.autoEvaluatePhoto = onObjectFinalized(
   {
     region: "asia-northeast1",
-    secrets: [anthropicKey],
-    memory: "512MiB",
-    timeoutSeconds: 120,
+    secrets: [anthropicKey, openaiKey, geminiKey],
+    memory: "1GiB",
+    timeoutSeconds: 300,
   },
   async (event) => {
     const filePath = event.data.name;
@@ -294,19 +294,80 @@ exports.autoEvaluatePhoto = onObjectFinalized(
 
     try {
       const base64 = await getResizedBase64(filePath);
-      const result = await callClaude(base64, anthropicKey.value());
+
+      // Mark as processing
+      await db.doc(`photos/${photoId}`).update({
+        aiStatus: "processing",
+        debateStatus: "processing",
+        debateStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 3-AI 동시 평가 (Claude + GPT + Gemini)
+      const [claudeResult, gptResult, geminiResult] = await Promise.allSettled([
+        callClaude(base64, anthropicKey.value(), buildRolePrompt(ROLE_PREFIX_CLAUDE)),
+        callGPT(base64, openaiKey.value(), buildRolePrompt(ROLE_PREFIX_GPT)),
+        callGemini(base64, geminiKey.value(), 2, buildRolePrompt(ROLE_PREFIX_GEMINI)),
+      ]);
+
+      const evaluations = {
+        claude: claudeResult.status === "fulfilled" ? claudeResult.value : null,
+        gpt: gptResult.status === "fulfilled" ? gptResult.value : null,
+        gemini: geminiResult.status === "fulfilled" ? geminiResult.value : null,
+      };
+
+      const successfulEvals = Object.values(evaluations).filter(Boolean);
+
+      if (successfulEvals.length < 2) {
+        // 2개 미만 성공 시 성공한 단일 AI 결과라도 저장
+        const fallback = successfulEvals[0];
+        if (fallback) {
+          await db.doc(`photos/${photoId}`).update({
+            scores: fallback.scores,
+            totalScore: fallback.totalScore,
+            critique: fallback.critique,
+            references: fallback.references || [],
+            aiTags: fallback.aiTags || [],
+            category: (fallback.aiTags && fallback.aiTags[0]) || '미분류',
+            aiEvaluated: true,
+            aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            aiModel: "claude-sonnet-4-20250514",
+            aiStatus: "done",
+            debateStatus: "error",
+            debateError: "최소 2개 AI 응답 필요. 단일 AI 결과로 대체.",
+          });
+          return;
+        }
+        throw new Error("모든 AI 평가 실패");
+      }
+
+      // Debate & Consensus (Claude moderates)
+      const filledEvaluations = {};
+      for (const [key, val] of Object.entries(evaluations)) {
+        filledEvaluations[key] = val || { scores: {}, critique: { summary: "(응답 실패)" } };
+      }
+      const debateResult = await callDebateModerator(filledEvaluations, anthropicKey.value());
+
+      const finalValues = Object.values(debateResult.finalScores);
+      const finalTotal = Math.round((finalValues.reduce((a, b) => a + b, 0) / finalValues.length) * 10) / 10;
 
       await db.doc(`photos/${photoId}`).update({
-        scores: result.scores,
-        totalScore: result.totalScore,
-        critique: result.critique,
-        references: result.references || [],
-        aiTags: result.aiTags || [],
-        category: (result.aiTags && result.aiTags[0]) || '미분류',
+        scores: debateResult.finalScores,
+        totalScore: finalTotal,
+        critique: debateResult.finalCritique,
+        references: debateResult.references || [],
+        aiTags: debateResult.aiTags || [],
+        category: (debateResult.aiTags && debateResult.aiTags[0]) || '미분류',
         aiEvaluated: true,
         aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        aiModel: "claude-sonnet-4-20250514",
+        aiModel: "multi-ai-debate",
         aiStatus: "done",
+        individualEvaluations: {
+          claude: evaluations.claude,
+          gpt: evaluations.gpt,
+          gemini: evaluations.gemini,
+        },
+        debate: debateResult.discussion,
+        debateStatus: "done",
       });
     } catch (error) {
       console.error(`Failed to evaluate photo ${photoId}:`, error);
@@ -314,6 +375,7 @@ exports.autoEvaluatePhoto = onObjectFinalized(
         aiEvaluated: false,
         aiError: error.message,
         aiStatus: "error",
+        debateStatus: "error",
       });
     }
   }

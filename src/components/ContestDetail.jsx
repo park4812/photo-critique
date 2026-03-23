@@ -547,8 +547,8 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin, i
 
               {/* 하단 정보 */}
               <div className="contest-entry-info">
-                {isClosed && (
-                  <div className="contest-entry-name">{entry.uploaderName}</div>
+                {(isVotingPhase || isClosed) && (
+                  <div className="contest-entry-name">{entry.uploaderName || '익명'}</div>
                 )}
 
                 <div className="contest-entry-vote-row">
