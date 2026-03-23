@@ -447,10 +447,7 @@ export async function advanceContest(contestId, newStatus) {
   const update = { status: newStatus };
   if (newStatus === 'closed') update.closedAt = serverTimestamp();
   if (newStatus === 'voting') update.votingStartedAt = serverTimestamp();
-  // 결선에서 종료/재결선 시 runoff 필드 정리
-  if (newStatus === 'closed') {
-    update.runoffEntryIds = null;
-  }
+  // 결선에서 종료 시 runoffEntryIds 유지 (결과 정렬에 사용)
   await updateDoc(doc(db, 'contests', contestId), update);
 }
 

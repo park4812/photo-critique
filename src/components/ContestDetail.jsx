@@ -116,20 +116,26 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin, i
     return () => { if (unsub) unsub(); };
   }, [contest.id]);
 
-  // 정렬: closed면 투표순 (동점 시 출품순), runoff면 결선 대상만 상단
+  // 정렬
   const sortedEntries = useMemo(() => {
+    const byVoteThenTime = (a, b) => {
+      const diff = (b.voteCount || 0) - (a.voteCount || 0);
+      if (diff !== 0) return diff;
+      const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt?.seconds || 0) * 1000;
+      const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt?.seconds || 0) * 1000;
+      return ta - tb;
+    };
+
     if (isClosed) {
-      return [...entries].sort((a, b) => {
-        const diff = (b.voteCount || 0) - (a.voteCount || 0);
-        if (diff !== 0) return diff;
-        // 동점이면 출품순 (createdAt 빠른 순)
-        const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt?.seconds || 0) * 1000;
-        const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt?.seconds || 0) * 1000;
-        return ta - tb;
-      });
+      // 결선 후 종료: 결선 참가자가 상위, 그 안에서 투표순
+      if (runoffEntryIds.length > 0) {
+        const runoff = entries.filter(e => runoffEntryIds.includes(e.id)).sort(byVoteThenTime);
+        const rest = entries.filter(e => !runoffEntryIds.includes(e.id)).sort(byVoteThenTime);
+        return [...runoff, ...rest];
+      }
+      return [...entries].sort(byVoteThenTime);
     }
     if (isRunoff) {
-      // 결선 대상 먼저, 나머지 뒤에
       const runoff = entries.filter(e => runoffEntryIds.includes(e.id));
       const rest = entries.filter(e => !runoffEntryIds.includes(e.id));
       return [...runoff, ...rest];
