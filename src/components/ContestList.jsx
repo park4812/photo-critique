@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function ContestList({ contests, onContestClick, onCreateContest, isAdmin, currentUser }) {
+export default function ContestList({ contests, onContestClick, onCreateContest, isAdmin, isContestManager, currentUser }) {
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
@@ -47,7 +47,7 @@ export default function ContestList({ contests, onContestClick, onCreateContest,
     <div className="contest-list-container">
       <div className="contest-list-header">
         <h2 className="contest-list-title">투표</h2>
-        {isAdmin && (
+        {isContestManager && (
           <button className="album-create-btn" onClick={() => setShowCreate(true)}>
             + 새 투표
           </button>
@@ -100,7 +100,7 @@ export default function ContestList({ contests, onContestClick, onCreateContest,
         <div className="album-empty">
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏆</div>
           <p>아직 투표가 없습니다</p>
-          {isAdmin && <p style={{ fontSize: '13px', opacity: 0.6 }}>새 투표를 만들어보세요!</p>}
+          {isContestManager && <p style={{ fontSize: '13px', opacity: 0.6 }}>새 투표를 만들어보세요!</p>}
         </div>
       )}
     </div>

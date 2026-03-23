@@ -47,7 +47,7 @@ function getAnonVoterId() {
   } catch { return ''; }
 }
 
-export default function ContestDetail({ contest, onBack, currentUser, isAdmin }) {
+export default function ContestDetail({ contest, onBack, currentUser, isAdmin, isContestManager }) {
   const [entries, setEntries] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -275,7 +275,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
           <span className="contest-status-badge" style={{ background: `${statusInfo.color}22`, color: statusInfo.color }}>
             {statusInfo.label}
           </span>
-          {isAdmin && (
+          {isContestManager && (
             <div className="album-detail-actions">
               {!isClosed && (
                 <button className="album-action-btn" onClick={handleAdvance} title={isSubmitting ? '투표 시작' : '투표 종료'}>
@@ -293,7 +293,7 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin })
           <span style={{ color: statusInfo.color }}>{statusInfo.desc}</span>
         </div>
         {/* 관리자용 단계 진행 가이드 */}
-        {isAdmin && !isClosed && (
+        {isContestManager && !isClosed && (
           <div className="contest-admin-guide">
             <div className="contest-phase-bar">
               <div className={`contest-phase ${isSubmitting ? 'active' : 'done'}`}>① 접수</div>

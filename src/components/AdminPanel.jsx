@@ -7,9 +7,17 @@ export default function AdminPanel({ onClose }) {
   const [deletingUid, setDeletingUid] = useState(null);
   const [reTagging, setReTagging] = useState(false);
   const [reTagResult, setReTagResult] = useState(null);
+  const [contestManagers, setContestManagers] = useState([]);
 
   useEffect(() => {
     loadUsers();
+    // 투표 관리자 목록 구독
+    let unsub;
+    (async () => {
+      const { subscribeToContestManagers } = await import('../services/firebaseService');
+      unsub = subscribeToContestManagers(setContestManagers);
+    })();
+    return () => { if (unsub) unsub(); };
   }, []);
 
   const loadUsers = async () => {
@@ -83,13 +91,29 @@ export default function AdminPanel({ onClose }) {
                     가입: {formatDate(user.createdAt)} · 마지막 로그인: {formatDate(user.lastSignIn)}
                   </div>
                 </div>
-                <button
-                  className="admin-user-delete-btn"
-                  onClick={() => handleDelete(user.uid, user.email)}
-                  disabled={deletingUid === user.uid}
-                >
-                  {deletingUid === user.uid ? '삭제 중...' : '삭제'}
-                </button>
+                <div className="admin-user-actions">
+                  <label className="admin-contest-toggle" title="투표 관리 권한">
+                    <input
+                      type="checkbox"
+                      checked={contestManagers.includes(user.uid)}
+                      onChange={async (e) => {
+                        const { setContestManagers: saveMgrs } = await import('../services/firebaseService');
+                        const next = e.target.checked
+                          ? [...contestManagers, user.uid]
+                          : contestManagers.filter(u => u !== user.uid);
+                        await saveMgrs(next);
+                      }}
+                    />
+                    <span className="admin-toggle-label">🗳️</span>
+                  </label>
+                  <button
+                    className="admin-user-delete-btn"
+                    onClick={() => handleDelete(user.uid, user.email)}
+                    disabled={deletingUid === user.uid}
+                  >
+                    {deletingUid === user.uid ? '삭제 중...' : '삭제'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

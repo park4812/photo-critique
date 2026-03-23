@@ -61,6 +61,8 @@ function App() {
   const [initialContestId] = useState(getInitialContestId);
   const [notifications, setNotifications] = useState([]);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [contestManagers, setContestManagers] = useState([]);
+  const [highlightCommentId, setHighlightCommentId] = useState(null);
 
   // URL hash 동기화
   useEffect(() => {
@@ -184,6 +186,18 @@ function App() {
     return () => { if (unsubscribe) unsubscribe(); };
   }, []);
 
+  // 투표 관리자 목록 구독
+  useEffect(() => {
+    let unsub;
+    (async () => {
+      const { subscribeToContestManagers } = await import('./services/firebaseService');
+      unsub = subscribeToContestManagers(setContestManagers);
+    })();
+    return () => { if (unsub) unsub(); };
+  }, []);
+
+  const isContestManager = isAdmin || (currentUser && contestManagers.includes(currentUser.uid));
+
   // 내 사진 댓글 알림 구독
   useEffect(() => {
     if (!currentUser || !photos.length) { setNotifications([]); return; }
@@ -223,12 +237,17 @@ function App() {
   };
 
   // 알림에서 사진 클릭 → 해당 사진으로 이동
-  const handleNotifPhotoClick = (photoId) => {
+  const handleNotifPhotoClick = (photoId, commentId) => {
     const photo = photos.find(p => p.id === photoId);
     if (photo) {
       setActiveView('gallery');
       setSelectedPhoto(photo);
       setPanelOpen(true);
+      setHighlightCommentId(commentId || null);
+      // 이 알림 하나만 읽음 처리 (notifications에서 제거)
+      if (commentId) {
+        setNotifications(prev => prev.filter(n => n.id !== commentId));
+      }
     }
     setShowNotifPanel(false);
   };
@@ -469,7 +488,7 @@ function App() {
                   ? n.createdAt.toDate().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                   : '';
                 return (
-                  <div key={n.id || i} className="notif-item" onClick={() => handleNotifPhotoClick(n.photoId)}>
+                  <div key={n.id || i} className="notif-item" onClick={() => handleNotifPhotoClick(n.photoId, n.id)}>
                     <div className="notif-item-text">
                       <strong>{n.author || '누군가'}</strong>님이 <em>{photoTitle}</em>에 크리틱을 남겼습니다
                     </div>
@@ -555,6 +574,7 @@ function App() {
           onContestClick={(c) => setSelectedContest(c)}
           onCreateContest={handleCreateContest}
           isAdmin={isAdmin}
+          isContestManager={isContestManager}
           currentUser={currentUser}
         />
       )}
@@ -565,6 +585,7 @@ function App() {
           onBack={() => setSelectedContest(null)}
           currentUser={currentUser}
           isAdmin={isAdmin}
+          isContestManager={isContestManager}
         />
       )}
 
@@ -578,6 +599,8 @@ function App() {
         isAdmin={isAdmin}
         onDeletePhoto={handleDeletePhoto}
         currentUser={currentUser}
+        highlightCommentId={highlightCommentId}
+        onHighlightDone={() => setHighlightCommentId(null)}
       />
 
       {uploadOpen && currentUser && (

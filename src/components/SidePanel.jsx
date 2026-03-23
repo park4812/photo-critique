@@ -162,7 +162,7 @@ function DebateView({ debate, individualEvaluations }) {
   );
 }
 
-export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEvaluate, onDebateEvaluate, isAdmin, onDeletePhoto, currentUser }) {
+export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEvaluate, onDebateEvaluate, isAdmin, onDeletePhoto, currentUser, highlightCommentId, onHighlightDone }) {
   const [activeTab, setActiveTab] = useState('critique');
   const [reEvalLoading, setReEvalLoading] = useState(false);
   const [debateLoading, setDebateLoading] = useState(false);
@@ -170,6 +170,25 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
   const [exifSettings, setExifSettings] = useState(getExifSettings);
   const [showExifConfig, setShowExifConfig] = useState(false);
   const [liveComments, setLiveComments] = useState([]);
+  const [flashingId, setFlashingId] = useState(null);
+
+  // 알림에서 클릭한 댓글 → comments 탭으로 전환 + 점멸 + 스크롤
+  useEffect(() => {
+    if (highlightCommentId && isOpen) {
+      setActiveTab('comments');
+      setFlashingId(highlightCommentId);
+      // 스크롤
+      setTimeout(() => {
+        const el = document.getElementById(`comment-${highlightCommentId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+      const timer = setTimeout(() => {
+        setFlashingId(null);
+        if (onHighlightDone) onHighlightDone();
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightCommentId, isOpen]);
 
   // 댓글 서브컬렉션 실시간 구독
   useEffect(() => {
@@ -646,10 +665,21 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
         {activeTab === 'comments' && (
           <div className="comments-section">
             {comments.map((c, i) => (
-              <div key={i} className="comment-card">
+              <div key={c.id || i} className={`comment-card ${flashingId && flashingId === c.id ? 'comment-flash' : ''}`} id={`comment-${c.id}`}>
                 <div className="comment-header">
                   <span className="comment-author">{c.author}</span>
                   <span className="comment-date">{c.date}</span>
+                  {isAdmin && c.id && (
+                    <button
+                      className="comment-delete-btn"
+                      title="크리틱 삭제"
+                      onClick={async () => {
+                        if (!window.confirm(`${c.author}님의 크리틱을 삭제하시겠습니까?`)) return;
+                        const { deleteComment } = await import('../services/firebaseService');
+                        await deleteComment(photo.id, c.id);
+                      }}
+                    >✕</button>
+                  )}
                 </div>
                 {c.overallRating > 0 && (
                   <div className="comment-overall-rating">

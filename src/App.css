@@ -486,11 +486,19 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   margin-bottom: 10px;
+  transition: border-color 0.3s;
+}
+.comment-card.comment-flash {
+  animation: commentFlash 0.6s ease-in-out 5;
+}
+@keyframes commentFlash {
+  0%, 100% { border-color: var(--border); }
+  50% { border-color: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
 }
 .comment-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
 .comment-author {
@@ -500,7 +508,20 @@ body {
 .comment-date {
   font-size: 11px;
   color: var(--text-muted);
+  margin-right: auto;
 }
+.comment-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.comment-card:hover .comment-delete-btn { opacity: 1; }
+.comment-delete-btn:hover { color: #f87171; }
 .comment-scores {
   display: flex;
   gap: 6px;
@@ -818,6 +839,26 @@ body {
 .admin-user-delete-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.admin-contest-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.admin-contest-toggle input {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.admin-toggle-label {
+  font-size: 14px;
 }
 
 /* ===== Debate View ===== */

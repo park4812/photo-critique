@@ -179,6 +179,10 @@ export async function addComment(photoId, commentData) {
   return docRef.id;
 }
 
+export async function deleteComment(photoId, commentId) {
+  await deleteDoc(doc(db, 'photos', photoId, 'comments', commentId));
+}
+
 // ===== 내 사진 댓글 알림 =====
 
 // 내 사진들에 달린 새 댓글을 실시간 구독
@@ -567,6 +571,22 @@ export async function deleteEntry(contestId, entryId) {
       entryCount: Math.max(0, (contestSnap.data().entryCount || 0) - 1),
     });
   }
+}
+
+// ===== 투표 관리자 권한 =====
+
+export function subscribeToContestManagers(callback) {
+  return onSnapshot(doc(db, 'settings', 'contestManagers'), (snapshot) => {
+    if (snapshot.exists()) {
+      callback(snapshot.data().uids || []);
+    } else {
+      callback([]);
+    }
+  });
+}
+
+export async function setContestManagers(uids) {
+  await setDoc(doc(db, 'settings', 'contestManagers'), { uids });
 }
 
 // ===== Legacy (for sample data mode) =====
