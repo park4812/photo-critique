@@ -498,77 +498,118 @@ export default function ContestDetail({ contest, onBack, currentUser, isAdmin, i
       )}
 
       {/* 투표/결선/종료 단계: 사진 그리드 */}
-      {(isVotingPhase || isClosed) && finalSortedEntries.length > 0 && (
-        <div className={`contest-entries-grid ${isClosed ? 'results' : ''}`}>
-          {finalSortedEntries.map((entry, idx) => {
-            const isRunoffEntry = isRunoff && runoffEntryIds.includes(entry.id);
-            const isNonRunoffEntry = isRunoff && !runoffEntryIds.includes(entry.id);
-            const rank = isClosed ? idx + 1 : null;
-            const isAdminPicked = isClosed && winnerId && entry.id === winnerId;
-            const displayRank = isAdminPicked ? 1 : rank;
-            const rankStyle = displayRank && RANK_STYLES[displayRank];
-            const voted = entry.votes?.includes(voterId);
+      {(isVotingPhase || isClosed) && finalSortedEntries.length > 0 && (() => {
+        // 결선 후 종료: 결선 그룹과 나머지 그룹 분리
+        const closedAfterRunoff = isClosed && runoffEntryIds.length > 0;
+        const runoffGroup = closedAfterRunoff ? finalSortedEntries.filter(e => runoffEntryIds.includes(e.id)) : [];
+        const restGroup = closedAfterRunoff ? finalSortedEntries.filter(e => !runoffEntryIds.includes(e.id)) : [];
 
-            return (
-              <div
-                key={entry.id}
-                className={`contest-entry ${rankStyle?.frame || ''} ${isClosed && displayRank > 3 ? 'contest-frame-normal' : ''} ${isNonRunoffEntry ? 'contest-entry-dimmed' : ''} ${pickingWinner && tiedEntries.some(t => t.id === entry.id) ? 'contest-entry-pickable' : ''}`}
-                onClick={pickingWinner && tiedEntries.some(t => t.id === entry.id) ? () => handlePickWinner(entry.id) : undefined}
-                style={pickingWinner && tiedEntries.some(t => t.id === entry.id) ? { cursor: 'pointer' } : undefined}
-              >
-                {/* 순위 뱃지 */}
-                {rankStyle && (
-                  <div className="contest-rank-badge">
-                    <span className="contest-rank-emoji">{rankStyle.emoji}</span>
-                    <span className="contest-rank-label">{rankStyle.label}</span>
-                    {isAdminPicked && <span className="contest-admin-pick-tag">관리자 선정</span>}
-                  </div>
-                )}
-                {isClosed && displayRank > 3 && (
-                  <div className="contest-rank-badge normal">
-                    <span className="contest-rank-label">{displayRank}위</span>
-                  </div>
-                )}
+        const renderEntry = (entry, idx, groupOffset = 0) => {
+          const isRunoffEntry = isRunoff && runoffEntryIds.includes(entry.id);
+          const isNonRunoffEntry = isRunoff && !runoffEntryIds.includes(entry.id);
+          const globalIdx = groupOffset + idx;
+          const rank = isClosed ? globalIdx + 1 : null;
+          const isAdminPicked = isClosed && winnerId && entry.id === winnerId;
+          const displayRank = isAdminPicked ? 1 : rank;
+          const rankStyle = displayRank && RANK_STYLES[displayRank];
+          const voted = entry.votes?.includes(voterId);
 
-                {/* 결선 마크 */}
-                {isRunoffEntry && (
-                  <div className="contest-runoff-mark">⚡ 결선</div>
-                )}
-
-                {/* 사진 */}
-                <div className="contest-entry-img-wrap" onClick={!pickingWinner ? () => setViewImage(entry.imageUrl) : undefined}>
-                  <img src={entry.imageUrl} alt="" className="contest-entry-img" />
+          return (
+            <div
+              key={entry.id}
+              className={`contest-entry ${rankStyle?.frame || ''} ${isClosed && displayRank > 3 ? 'contest-frame-normal' : ''} ${isNonRunoffEntry ? 'contest-entry-dimmed' : ''} ${pickingWinner && tiedEntries.some(t => t.id === entry.id) ? 'contest-entry-pickable' : ''}`}
+              onClick={pickingWinner && tiedEntries.some(t => t.id === entry.id) ? () => handlePickWinner(entry.id) : undefined}
+              style={pickingWinner && tiedEntries.some(t => t.id === entry.id) ? { cursor: 'pointer' } : undefined}
+            >
+              {/* 순위 뱃지 */}
+              {rankStyle && (
+                <div className="contest-rank-badge">
+                  <span className="contest-rank-emoji">{rankStyle.emoji}</span>
+                  <span className="contest-rank-label">{rankStyle.label}</span>
+                  {isAdminPicked && <span className="contest-admin-pick-tag">관리자 선정</span>}
                 </div>
+              )}
+              {isClosed && displayRank > 3 && (
+                <div className="contest-rank-badge normal">
+                  <span className="contest-rank-label">{displayRank}위</span>
+                </div>
+              )}
 
-                {/* 하단 정보 */}
-                <div className="contest-entry-info">
-                  {isClosed && (
-                    <div className="contest-entry-name">{entry.uploaderName}</div>
+              {/* 결선 마크 */}
+              {isRunoffEntry && (
+                <div className="contest-runoff-mark">⚡ 결선</div>
+              )}
+
+              {/* 사진 */}
+              <div className="contest-entry-img-wrap" onClick={!pickingWinner ? () => setViewImage(entry.imageUrl) : undefined}>
+                <img src={entry.imageUrl} alt="" className="contest-entry-img" />
+              </div>
+
+              {/* 하단 정보 */}
+              <div className="contest-entry-info">
+                {isClosed && (
+                  <div className="contest-entry-name">{entry.uploaderName}</div>
+                )}
+
+                <div className="contest-entry-vote-row">
+                  {isVotingPhase && voterId && !isNonRunoffEntry && !pickingWinner && (
+                    <button
+                      className={`contest-vote-btn ${voted ? 'voted' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); handleVote(entry.id); }}
+                      disabled={votingId === entry.id}
+                    >
+                      {voted ? '❤️' : '🤍'} {entry.voteCount || 0}
+                    </button>
                   )}
-
-                  <div className="contest-entry-vote-row">
-                    {isVotingPhase && voterId && !isNonRunoffEntry && !pickingWinner && (
-                      <button
-                        className={`contest-vote-btn ${voted ? 'voted' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); handleVote(entry.id); }}
-                        disabled={votingId === entry.id}
-                      >
-                        {voted ? '❤️' : '🤍'} {entry.voteCount || 0}
-                      </button>
-                    )}
-                    {isNonRunoffEntry && (
-                      <span className="contest-entry-votes" style={{ opacity: 0.4 }}>결선 제외</span>
-                    )}
-                    {isClosed && (
-                      <span className="contest-entry-votes">❤️ {entry.voteCount || 0}표</span>
-                    )}
-                  </div>
+                  {isNonRunoffEntry && (
+                    <span className="contest-entry-votes" style={{ opacity: 0.4 }}>결선 제외</span>
+                  )}
+                  {isClosed && (
+                    <span className="contest-entry-votes">
+                      {closedAfterRunoff && runoffEntryIds.includes(entry.id) ? '⚡ ' : ''}
+                      ❤️ {entry.voteCount || 0}표
+                      {closedAfterRunoff && runoffEntryIds.includes(entry.id) && <span className="contest-vote-label"> (결선)</span>}
+                    </span>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        };
+
+        if (closedAfterRunoff) {
+          return (
+            <>
+              {/* 결선 그룹 */}
+              <div className="contest-group-header runoff">
+                <span className="contest-group-icon">⚡</span>
+                <span>결선 투표 ({runoffGroup.length}명)</span>
+              </div>
+              <div className={`contest-entries-grid results`}>
+                {runoffGroup.map((entry, idx) => renderEntry(entry, idx, 0))}
+              </div>
+              {/* 나머지 그룹 */}
+              {restGroup.length > 0 && (
+                <>
+                  <div className="contest-group-header rest">
+                    <span className="contest-group-icon">📋</span>
+                    <span>예선 탈락 ({restGroup.length}명)</span>
+                  </div>
+                  <div className={`contest-entries-grid results`}>
+                    {restGroup.map((entry, idx) => renderEntry(entry, idx, runoffGroup.length))}
+                  </div>
+                </>
+              )}
+            </>
+          );
+        }
+
+        return (
+          <div className={`contest-entries-grid ${isClosed ? 'results' : ''}`}>
+            {finalSortedEntries.map((entry, idx) => renderEntry(entry, idx, 0))}
+          </div>
+        );
+      })()}
 
       {(isVotingPhase || isClosed) && finalSortedEntries.length === 0 && (
         <div className="album-empty">

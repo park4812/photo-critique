@@ -960,6 +960,34 @@ body {
   font-weight: 600;
   margin-bottom: 16px;
 }
+.contest-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 20px 0 12px 0;
+}
+.contest-group-header:first-child { margin-top: 0; }
+.contest-group-header.runoff {
+  background: linear-gradient(135deg, rgba(249,115,22,0.12), rgba(251,191,36,0.08));
+  color: #f97316;
+  border: 1px solid rgba(249,115,22,0.2);
+}
+.contest-group-header.rest {
+  background: rgba(136,136,136,0.08);
+  color: #888;
+  border: 1px solid rgba(136,136,136,0.15);
+}
+.contest-group-icon {
+  font-size: 16px;
+}
+.contest-vote-label {
+  font-size: 11px;
+  opacity: 0.6;
+}
 .contest-entry-dimmed {
   opacity: 0.35;
   pointer-events: none;
