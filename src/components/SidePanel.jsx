@@ -14,6 +14,24 @@ function getScoreClass(score) {
   return 'score-low';
 }
 
+function getGrade(score) {
+  if (score >= 9.0) return { grade: 'S', label: '마스터', color: '#e2b340' };
+  if (score >= 8.0) return { grade: 'A', label: '프로급', color: '#4ade80' };
+  if (score >= 7.0) return { grade: 'B', label: '우수', color: '#60a5fa' };
+  if (score >= 5.0) return { grade: 'C', label: '양호', color: '#fbbf24' };
+  if (score >= 3.0) return { grade: 'D', label: '보통', color: '#fb923c' };
+  return { grade: 'F', label: '부족', color: '#f87171' };
+}
+
+const GRADE_GUIDE = [
+  { grade: 'S', range: '9.0~10.0', label: '마스터', desc: '수상작/전시 수준의 뛰어난 완성도', color: '#e2b340' },
+  { grade: 'A', range: '8.0~8.9', label: '프로급', desc: '전문 포트폴리오에 넣을 수 있는 수준', color: '#4ade80' },
+  { grade: 'B', range: '7.0~7.9', label: '우수', desc: '기술적으로 탄탄하고 매력적인 사진', color: '#60a5fa' },
+  { grade: 'C', range: '5.0~6.9', label: '양호', desc: '기본기는 갖추었으나 개선 여지 있음', color: '#fbbf24' },
+  { grade: 'D', range: '3.0~4.9', label: '보통', desc: '기초적인 부분에서 보완이 필요', color: '#fb923c' },
+  { grade: 'F', range: '0~2.9', label: '부족', desc: '전반적으로 큰 개선이 필요', color: '#f87171' },
+];
+
 const AI_COLORS = {
   'Claude': '#d4a574',
   'GPT-4': '#74b9ff',
@@ -124,6 +142,7 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
   const [activeTab, setActiveTab] = useState('critique');
   const [reEvalLoading, setReEvalLoading] = useState(false);
   const [debateLoading, setDebateLoading] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   if (!photo) return <div className={`side-panel ${isOpen ? 'open' : ''}`}></div>;
 
@@ -184,6 +203,51 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
       </div>
 
       <img className="panel-image" src={photo.imageUrl} alt={photo.title} />
+
+      {/* EXIF Info */}
+      {photo.exif && (
+        <div style={{
+          padding: '8px 14px', display: 'flex', flexWrap: 'wrap',
+          gap: '4px 12px', fontSize: '11px', color: 'var(--text-muted)',
+          borderBottom: '1px solid var(--border)',
+          background: 'rgba(255,255,255,0.02)'
+        }}>
+          {photo.exif.camera && (
+            <span title="카메라" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ opacity: 0.6 }}>📷</span> {photo.exif.camera}
+            </span>
+          )}
+          {photo.exif.lens && (
+            <span title="렌즈" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ opacity: 0.6 }}>🔭</span> {photo.exif.lens}
+            </span>
+          )}
+          {(photo.exif.focalLength || photo.exif.aperture || photo.exif.shutterSpeed || photo.exif.iso) && (
+            <span title="촬영 설정" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ opacity: 0.6 }}>⚙️</span>
+              {[photo.exif.focalLength, photo.exif.aperture, photo.exif.shutterSpeed, photo.exif.iso].filter(Boolean).join(' · ')}
+            </span>
+          )}
+          {photo.exif.dateTime && (
+            <span title="촬영 일시" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ opacity: 0.6 }}>📅</span> {new Date(photo.exif.dateTime).toLocaleString('ko-KR')}
+            </span>
+          )}
+          {photo.exif.gps && (
+            <a href={`https://maps.google.com/?q=${photo.exif.gps.lat},${photo.exif.gps.lng}`}
+              target="_blank" rel="noopener noreferrer"
+              title="촬영 위치 (Google Maps)"
+              style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--accent)', textDecoration: 'none' }}>
+              <span style={{ opacity: 0.6 }}>📍</span> 위치 보기
+            </a>
+          )}
+          {photo.exif.resolution && (
+            <span title="원본 해상도">
+              {photo.exif.resolution}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="panel-content">
         {/* AI Status Banner */}
@@ -260,7 +324,20 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
               {photo.totalScore.toFixed(1)}
             </span>
             <div>
-              <div className="score-total-label">종합 점수</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="score-total-label">종합 점수</div>
+                {photo.totalScore > 0 && (() => {
+                  const g = getGrade(photo.totalScore);
+                  return (
+                    <span style={{
+                      padding: '1px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 700,
+                      background: `${g.color}22`, color: g.color, letterSpacing: '0.5px'
+                    }}>
+                      {g.grade} · {g.label}
+                    </span>
+                  );
+                })()}
+              </div>
               <div style={{ fontSize: '11px', color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 7항목 평균
                 {isDebateModel ? (
@@ -274,6 +351,10 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
                     borderRadius: '4px', fontSize: '10px', color: 'var(--accent)'
                   }}>AI</span>
                 ) : null}
+                <span onClick={() => setShowGuide(!showGuide)}
+                  style={{ cursor: 'pointer', fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                  {showGuide ? '기준 닫기' : '등급 기준?'}
+                </span>
               </div>
             </div>
             {photo.aiEvaluated && !isPending && (
@@ -294,16 +375,47 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
             )}
           </div>
 
+          {showGuide && (
+            <div style={{
+              margin: '10px 0', padding: '10px 12px',
+              background: 'var(--bg)', borderRadius: '8px',
+              border: '1px solid var(--border)'
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                점수 등급 기준
+              </div>
+              {GRADE_GUIDE.map(g => (
+                <div key={g.grade} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '3px 0', fontSize: '11px'
+                }}>
+                  <span style={{
+                    width: '20px', textAlign: 'center', fontWeight: 700,
+                    color: g.color
+                  }}>{g.grade}</span>
+                  <span style={{ width: '52px', color: 'var(--text-muted)', fontSize: '10px' }}>{g.range}</span>
+                  <span style={{ color: g.color, fontWeight: 600, width: '40px' }}>{g.label}</span>
+                  <span style={{ color: 'var(--text-secondary)', flex: 1 }}>{g.desc}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="score-bars">
             {Object.keys(scoreLabels).map(key => {
               const val = photo.scores[key];
               if (val == null) return null;
+              const g = getGrade(val);
               return (
                 <div key={key} className="score-bar-row">
                   <span className="score-bar-label">{scoreLabels[key]?.ko}</span>
                   <div className="score-bar-track">
                     <div className="score-bar-fill" style={{ width: `${val * 10}%`, background: getScoreColor(val) }} />
                   </div>
+                  <span style={{
+                    fontSize: '10px', fontWeight: 700, color: g.color,
+                    width: '14px', textAlign: 'center'
+                  }}>{g.grade}</span>
                   <span className="score-bar-value" style={{ color: getScoreColor(val) }}>{val.toFixed(1)}</span>
                 </div>
               );

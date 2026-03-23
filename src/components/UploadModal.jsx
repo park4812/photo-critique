@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import heic2any from 'heic2any';
+import exifr from 'exifr';
 
 const HEIC_TYPES = ['image/heic', 'image/heif'];
 const HEIC_EXTENSIONS = ['.heic', '.heif'];
@@ -75,6 +76,72 @@ function resizeImage(file, maxWidth = 2048) {
 }
 
 /**
+ * 사진 파일에서 EXIF 메타데이터 추출
+ */
+async function extractExifData(file) {
+  try {
+    const exif = await exifr.parse(file, {
+      pick: [
+        'DateTimeOriginal', 'CreateDate',
+        'Make', 'Model', 'LensModel', 'LensMake',
+        'FocalLength', 'FNumber', 'ExposureTime', 'ISO',
+        'ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight',
+        'GPSLatitude', 'GPSLongitude', 'GPSAltitude',
+        'WhiteBalance', 'Flash', 'MeteringMode', 'ExposureProgram',
+        'Software',
+      ],
+      gps: true,
+    });
+    if (!exif) return null;
+
+    const result = {};
+
+    // 촬영 일시
+    const dt = exif.DateTimeOriginal || exif.CreateDate;
+    if (dt) {
+      const d = dt instanceof Date ? dt : new Date(dt);
+      if (!isNaN(d)) result.dateTime = d.toISOString();
+    }
+
+    // 카메라 정보
+    if (exif.Make || exif.Model) {
+      result.camera = [exif.Make, exif.Model].filter(Boolean).join(' ').trim();
+    }
+    if (exif.LensModel || exif.LensMake) {
+      result.lens = [exif.LensMake, exif.LensModel].filter(Boolean).join(' ').trim();
+    }
+
+    // 촬영 설정
+    if (exif.FocalLength) result.focalLength = `${Math.round(exif.FocalLength)}mm`;
+    if (exif.FNumber) result.aperture = `f/${exif.FNumber}`;
+    if (exif.ExposureTime) {
+      result.shutterSpeed = exif.ExposureTime < 1
+        ? `1/${Math.round(1 / exif.ExposureTime)}s`
+        : `${exif.ExposureTime}s`;
+    }
+    if (exif.ISO) result.iso = `ISO ${exif.ISO}`;
+
+    // GPS
+    if (exif.latitude != null && exif.longitude != null) {
+      result.gps = { lat: exif.latitude, lng: exif.longitude };
+      if (exif.GPSAltitude != null) result.gps.alt = Math.round(exif.GPSAltitude);
+    }
+
+    // 원본 해상도
+    const w = exif.ExifImageWidth || exif.ImageWidth;
+    const h = exif.ExifImageHeight || exif.ImageHeight;
+    if (w && h) result.resolution = `${w}×${h}`;
+
+    if (exif.Software) result.software = exif.Software;
+
+    return Object.keys(result).length > 0 ? result : null;
+  } catch (err) {
+    console.warn('EXIF extraction failed:', err);
+    return null;
+  }
+}
+
+/**
  * UploadModal
  *
  * Cloud Function 방식:
@@ -95,6 +162,7 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
 
   const [fileError, setFileError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [exifData, setExifData] = useState(null);
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -107,8 +175,13 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
 
     setFileError('');
     setIsProcessing(true);
+    setExifData(null);
 
     try {
+      // 0단계: EXIF 추출 (원본 파일에서 — 변환 전에 해야 유지됨)
+      const exif = await extractExifData(file);
+      if (exif) setExifData(exif);
+
       // 1단계: HEIC 등 비표준 포맷 → JPEG 변환
       const compatible = await ensureJpegCompatible(file);
 
@@ -155,6 +228,7 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
           location: '',
           date: new Date().toISOString().split('T')[0],
           tags: [],
+          ...(exifData ? { exif: exifData } : {}),
         };
 
         const photoId = await uploadPhoto(photoData, imageData.blob);
@@ -253,6 +327,23 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
               borderRadius: '6px', fontSize: '12px', color: '#f87171'
             }}>
               {fileError}
+            </div>
+          )}
+          {exifData && (
+            <div style={{
+              marginTop: '8px', padding: '8px 12px',
+              background: 'rgba(200, 168, 110, 0.06)',
+              border: '1px solid rgba(200, 168, 110, 0.15)',
+              borderRadius: '6px', fontSize: '11px', color: 'var(--text-secondary)',
+              display: 'flex', flexWrap: 'wrap', gap: '6px 14px'
+            }}>
+              {exifData.camera && <span>{exifData.camera}</span>}
+              {exifData.lens && <span>{exifData.lens}</span>}
+              {[exifData.focalLength, exifData.aperture, exifData.shutterSpeed, exifData.iso].filter(Boolean).length > 0 && (
+                <span>{[exifData.focalLength, exifData.aperture, exifData.shutterSpeed, exifData.iso].filter(Boolean).join(' · ')}</span>
+              )}
+              {exifData.dateTime && <span>{new Date(exifData.dateTime).toLocaleString('ko-KR')}</span>}
+              {exifData.gps && <span>GPS {exifData.gps.lat.toFixed(4)}, {exifData.gps.lng.toFixed(4)}</span>}
             </div>
           )}
         </div>
