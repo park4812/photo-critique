@@ -47,10 +47,16 @@ export default function AlbumDetail({
   }, [albumPhotos]);
 
   // Photos not yet in album (for add picker)
+  // 관리자: 모든 사진 / 일반 유저: 자기 사진만
   const availablePhotos = useMemo(() => {
     const inAlbum = new Set(album.photoIds || []);
-    return allPhotos.filter(p => !inAlbum.has(p.id));
-  }, [allPhotos, album.photoIds]);
+    return allPhotos.filter(p => {
+      if (inAlbum.has(p.id)) return false;
+      if (isAdmin) return true;
+      // 일반 유저는 자기 사진만 추가 가능
+      return p.uploaderUid === currentUser?.uid;
+    });
+  }, [allPhotos, album.photoIds, isAdmin, currentUser]);
 
   const handleSaveEdit = () => {
     onEditAlbum(album.id, { title: editTitle.trim(), description: editDesc.trim() });
@@ -170,7 +176,7 @@ export default function AlbumDetail({
                     </span>
                   )}
                 </div>
-                {canEdit && (
+                {canEdit && (isAdmin || photo.uploaderUid === currentUser?.uid) && (
                   <button
                     className="album-photo-remove"
                     onClick={(e) => {
@@ -216,6 +222,9 @@ export default function AlbumDetail({
                       <img src={photo.thumbnailUrl || photo.imageUrl} alt={photo.title} />
                       <div className="album-picker-check">{selectedToAdd.has(photo.id) ? '✓' : ''}</div>
                       <div className="album-picker-title">{photo.title}</div>
+                      {isAdmin && photo.uploaderName && (
+                        <div className="album-picker-owner">👤 {photo.uploaderName}</div>
+                      )}
                     </div>
                   ))}
                 </div>

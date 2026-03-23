@@ -219,10 +219,15 @@ export default function UploadModal({ onUpload, onClose, useFirebase = false, up
 
         setUploadStatus('Firebase에 업로드 중...');
 
+        // Get current user UID for ownership tracking
+        const { auth: fbAuth } = await import('../firebase');
+        const uploaderUid = fbAuth.currentUser?.uid || '';
+
         const photoData = {
           title: title.trim(),
           description: description.trim(),
           uploaderName: fixedUploaderName || '익명',
+          uploaderUid,
           category: 'AI 분류 중...',
           aiTags: [],
           location: '',

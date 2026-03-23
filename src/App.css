@@ -1553,6 +1553,15 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.album-picker-owner {
+  padding: 0 6px 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .album-picker-footer {
   display: flex;
   justify-content: space-between;
