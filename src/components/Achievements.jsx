@@ -22,7 +22,7 @@ const BADGES = [
 export default function Achievements({ photos, currentUser }) {
   const stats = useMemo(() => {
     const myPhotos = currentUser
-      ? photos.filter(p => p.userId === currentUser.uid)
+      ? photos.filter(p => p.uploaderUid === currentUser.uid)
       : photos;
 
     const scored = myPhotos.filter(p => p.aiEvaluated && p.totalScore > 0);
@@ -42,7 +42,7 @@ export default function Achievements({ photos, currentUser }) {
     });
 
     const allScored = photos.filter(p => p.aiEvaluated && p.totalScore > 0).sort((a, b) => b.totalScore - a.totalScore);
-    const isTop3 = allScored.slice(0, 3).some(p => currentUser && p.userId === currentUser.uid);
+    const isTop3 = allScored.slice(0, 3).some(p => currentUser && p.uploaderUid === currentUser.uid);
 
     const allTags = new Set();
     myPhotos.forEach(p => (p.aiTags || []).forEach(t => allTags.add(t)));
@@ -67,7 +67,7 @@ export default function Achievements({ photos, currentUser }) {
     // Count comments by current user across all photos
     photos.forEach(p => {
       (p.comments || []).forEach(c => {
-        if (currentUser && c.userId === currentUser.uid) comments++;
+        if (currentUser && c.authorUid === currentUser.uid) comments++;
       });
     });
 
