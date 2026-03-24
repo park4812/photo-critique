@@ -639,6 +639,61 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
                     </div>
                   </div>
                 )}
+                {/* AI Photo Coach */}
+                {photo.scores && (
+                  <div className="critique-section">
+                    <div className="section-title" style={{ color: '#ffa94d' }}>🎓 AI 포토 코치</div>
+                    <div className="coach-tips">
+                      {(() => {
+                        const scores = photo.scores;
+                        const tips = [];
+                        const scoreEntries = Object.entries(scores).sort((a, b) => a[1] - b[1]);
+                        const weakest = scoreEntries.slice(0, 2);
+                        const strongest = scoreEntries.slice(-1)[0];
+                        const TIPS = {
+                          composition: { name: '구도', low: '삼분법이나 리딩라인을 활용해보세요. 주제를 중앙에서 벗어나게 배치하면 더 역동적인 구도가 됩니다.', high: '구도 감각이 뛰어나네요! 프레임 안의 프레임 기법도 시도해보세요.' },
+                          lighting: { name: '빛', low: '골든아워(일출/일몰)에 촬영하면 따뜻한 빛을 얻을 수 있습니다. 역광도 실루엣 효과로 활용해보세요.', high: '빛을 잘 읽는 눈이 있어요! 렘브란트 라이팅 같은 고급 기법도 도전해보세요.' },
+                          color: { name: '색감', low: '보색 대비(파랑-주황, 빨강-초록)를 활용하면 더 임팩트 있는 색감을 만들 수 있습니다.', high: '색감이 아름답습니다! 모노톤이나 컬러 스플래시 기법도 시도해보세요.' },
+                          focus: { name: '초점', low: '피사체에 정확히 초점을 맞추세요. 낮은 조리개(f/1.8~2.8)로 배경을 흐리면 피사체가 돋보입니다.', high: '초점 처리가 훌륭합니다! 심도를 창의적으로 활용해보세요.' },
+                          storytelling: { name: '스토리', low: '사진에 이야기를 담아보세요. 인물의 표정, 행동, 환경이 하나의 이야기가 되도록 구성해보세요.', high: '이야기가 느껴지는 좋은 사진이에요! 시리즈 촬영으로 확장해보세요.' },
+                          timing: { name: '타이밍', low: '결정적 순간을 포착하려면 연사 모드를 활용하세요. 예측하고 기다리는 인내도 중요합니다.', high: '타이밍 감각이 탁월합니다! 장노출도 도전해보세요.' },
+                          postProcessing: { name: '후보정', low: '밝기, 대비, 채도를 적절히 조절해보세요. 과한 보정보다는 자연스러운 톤이 좋습니다.', high: '후보정 실력이 좋습니다! 선택적 색보정이나 로컬 조정도 활용해보세요.' },
+                        };
+                        weakest.forEach(([key, val]) => {
+                          if (val < 8 && TIPS[key]) {
+                            tips.push({ type: 'improve', name: TIPS[key].name, score: val, tip: TIPS[key].low });
+                          }
+                        });
+                        if (strongest && TIPS[strongest[0]]) {
+                          tips.push({ type: 'strength', name: TIPS[strongest[0]].name, score: strongest[1], tip: TIPS[strongest[0]].high });
+                        }
+                        // Overall tip based on total score
+                        const total = photo.totalScore;
+                        let overallTip = '';
+                        if (total >= 9) overallTip = '전문가 수준입니다! 공모전 출품을 고려해보세요.';
+                        else if (total >= 8) overallTip = '아주 좋은 사진입니다. 약한 부분만 보완하면 S등급도 가능합니다!';
+                        else if (total >= 7) overallTip = '잠재력이 보이는 사진입니다. 아래 팁을 참고해서 한 단계 올라가보세요!';
+                        else if (total >= 6) overallTip = '기본기가 잡혀가고 있어요. 꾸준히 촬영하면서 발전시켜보세요!';
+                        else overallTip = '사진을 많이 찍는 것이 가장 좋은 연습입니다. 포기하지 마세요!';
+
+                        return (
+                          <>
+                            <div className="coach-overall">{overallTip}</div>
+                            {tips.map((t, i) => (
+                              <div key={i} className={`coach-tip ${t.type}`}>
+                                <div className="coach-tip-header">
+                                  <span className="coach-tip-badge">{t.type === 'improve' ? '💡 개선' : '✨ 강점'}</span>
+                                  <span className="coach-tip-name">{t.name} ({t.score.toFixed(1)})</span>
+                                </div>
+                                <div className="coach-tip-text">{t.tip}</div>
+                              </div>
+                            ))}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
                 {photo.aiModel && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right', marginTop: '8px' }}>
                     평가: {photo.aiModel === 'multi-ai-debate' ? 'Claude + GPT-4 + Gemini 토론 합의' : photo.aiModel}

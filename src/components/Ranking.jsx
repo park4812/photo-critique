@@ -63,6 +63,7 @@ export default function Ranking({ photos, onPhotoClick }) {
               </div>
               <div className="ranking-podium-info">
                 <div className="ranking-podium-name">{top3[1].title}</div>
+                <div className="ranking-podium-author">{top3[1].uploaderName || '익명'}</div>
                 <div className="ranking-podium-score">{top3[1].totalScore}</div>
               </div>
               <div className="ranking-podium-bar second"></div>
@@ -75,6 +76,7 @@ export default function Ranking({ photos, onPhotoClick }) {
               </div>
               <div className="ranking-podium-info">
                 <div className="ranking-podium-name">{top3[0].title}</div>
+                <div className="ranking-podium-author">{top3[0].uploaderName || '익명'}</div>
                 <div className="ranking-podium-score">{top3[0].totalScore}</div>
               </div>
               <div className="ranking-podium-bar first"></div>
@@ -87,6 +89,7 @@ export default function Ranking({ photos, onPhotoClick }) {
               </div>
               <div className="ranking-podium-info">
                 <div className="ranking-podium-name">{top3[2].title}</div>
+                <div className="ranking-podium-author">{top3[2].uploaderName || '익명'}</div>
                 <div className="ranking-podium-score">{top3[2].totalScore}</div>
               </div>
               <div className="ranking-podium-bar third"></div>
