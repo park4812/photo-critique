@@ -12,6 +12,7 @@ import AlbumDetail from './components/AlbumDetail';
 import TagManager from './components/TagManager';
 import ContestList from './components/ContestList';
 import ContestDetail from './components/ContestDetail';
+import Ranking from './components/Ranking';
 import './App.css';
 
 // Firebase is configured
@@ -39,6 +40,7 @@ function App() {
     const hash = window.location.hash.replace('#', '');
     if (hash.startsWith('albums')) return 'albums';
     if (hash.startsWith('contests')) return 'contests';
+    if (hash === 'ranking') return 'ranking';
     return 'gallery';
   };
   const getInitialAlbumId = () => {
@@ -71,6 +73,7 @@ function App() {
     else if (selectedContest) newHash = `#contests/${selectedContest.id}`;
     else if (activeView === 'albums') newHash = '#albums';
     else if (activeView === 'contests') newHash = '#contests';
+    else if (activeView === 'ranking') newHash = '#ranking';
     else newHash = '#gallery';
     if (window.location.hash !== newHash) {
       window.history.replaceState(null, '', newHash);
@@ -520,6 +523,10 @@ function App() {
           className={`view-tab ${activeView === 'contests' ? 'active' : ''}`}
           onClick={() => { setActiveView('contests'); setSelectedAlbum(null); setSelectedContest(null); }}
         >투표</button>
+        <button
+          className={`view-tab ${activeView === 'ranking' ? 'active' : ''}`}
+          onClick={() => { setActiveView('ranking'); setSelectedAlbum(null); setSelectedContest(null); }}
+        >랭킹</button>
       </div>
 
       {activeView === 'gallery' && (
@@ -590,6 +597,13 @@ function App() {
           currentUser={currentUser}
           isAdmin={isAdmin}
           isContestManager={isContestManager}
+        />
+      )}
+
+      {activeView === 'ranking' && (
+        <Ranking
+          photos={photos}
+          onPhotoClick={handlePhotoClick}
         />
       )}
 
