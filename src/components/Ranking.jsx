@@ -15,6 +15,13 @@ const GRADE_INFO = {
   F: { label: 'F', color: '#868e96', min: 0 },
 };
 
+const PERIODS = [
+  { key: 'all', label: '전체' },
+  { key: 'month', label: '이번달' },
+  { key: 'week', label: '이번주' },
+  { key: 'today', label: '오늘' },
+];
+
 function getGrade(score) {
   if (score >= 9.0) return GRADE_INFO.S;
   if (score >= 8.0) return GRADE_INFO.A;
@@ -24,14 +31,49 @@ function getGrade(score) {
   return GRADE_INFO.F;
 }
 
+function getDateRange(period) {
+  const now = new Date();
+  if (period === 'today') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return start;
+  }
+  if (period === 'week') {
+    const day = now.getDay();
+    const diff = day === 0 ? 6 : day - 1; // 월요일 시작
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
+    return start;
+  }
+  if (period === 'month') {
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return null; // all
+}
+
+function getPhotoDate(photo) {
+  if (photo.createdAt?.seconds) return new Date(photo.createdAt.seconds * 1000);
+  if (photo.createdAt?.toDate) return photo.createdAt.toDate();
+  if (photo.date) return new Date(photo.date);
+  return null;
+}
+
 export default function Ranking({ photos, onPhotoClick }) {
-  const [viewMode, setViewMode] = useState('all'); // all | top10 | byGrade
+  const [viewMode, setViewMode] = useState('all');
+  const [period, setPeriod] = useState('all');
+
+  const filteredByPeriod = useMemo(() => {
+    const startDate = getDateRange(period);
+    if (!startDate) return photos;
+    return photos.filter(p => {
+      const d = getPhotoDate(p);
+      return d && d >= startDate;
+    });
+  }, [photos, period]);
 
   const rankedPhotos = useMemo(() => {
-    return [...photos]
+    return [...filteredByPeriod]
       .filter(p => p.aiEvaluated && p.totalScore > 0)
       .sort((a, b) => b.totalScore - a.totalScore);
-  }, [photos]);
+  }, [filteredByPeriod]);
 
   const top10 = rankedPhotos.slice(0, 10);
   const top3 = rankedPhotos.slice(0, 3);
@@ -46,14 +88,114 @@ export default function Ranking({ photos, onPhotoClick }) {
     return groups;
   }, [rankedPhotos]);
 
+  // 주간 MVP 계산
+  const weeklyMVP = useMemo(() => {
+    const weekStart = getDateRange('week');
+    const weekPhotos = photos.filter(p => {
+      const d = getPhotoDate(p);
+      return d && d >= weekStart && p.aiEvaluated && p.totalScore > 0;
+    });
+
+    if (weekPhotos.length === 0) return null;
+
+    // 가장 많이 업로드한 유저
+    const uploadCounts = {};
+    const userNames = {};
+    weekPhotos.forEach(p => {
+      const uid = p.uploaderUid || 'unknown';
+      uploadCounts[uid] = (uploadCounts[uid] || 0) + 1;
+      if (p.uploaderName) userNames[uid] = p.uploaderName;
+    });
+    const topUploaderUid = Object.entries(uploadCounts).sort((a, b) => b[1] - a[1])[0];
+
+    // 이번주 최고 점수
+    const bestPhoto = [...weekPhotos].sort((a, b) => b.totalScore - a.totalScore)[0];
+
+    // 이번주 평균 점수 최고 유저 (3장 이상)
+    const userScores = {};
+    weekPhotos.forEach(p => {
+      const uid = p.uploaderUid || 'unknown';
+      if (!userScores[uid]) userScores[uid] = [];
+      userScores[uid].push(p.totalScore);
+    });
+    let bestAvgUser = null;
+    let bestAvg = 0;
+    Object.entries(userScores).forEach(([uid, scores]) => {
+      if (scores.length >= 2) {
+        const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+        if (avg > bestAvg) {
+          bestAvg = avg;
+          bestAvgUser = { uid, name: userNames[uid] || '익명', avg, count: scores.length };
+        }
+      }
+    });
+
+    return {
+      topUploader: topUploaderUid ? {
+        name: userNames[topUploaderUid[0]] || '익명',
+        count: topUploaderUid[1],
+      } : null,
+      bestPhoto,
+      bestAvgUser,
+      totalWeekPhotos: weekPhotos.length,
+    };
+  }, [photos]);
+
   const displayPhotos = viewMode === 'top10' ? top10 : rankedPhotos;
 
   return (
     <div className="ranking-container">
+      {/* 주간 MVP */}
+      {weeklyMVP && (
+        <div className="ranking-mvp-section">
+          <div className="ranking-mvp-title">이번주 MVP</div>
+          <div className="ranking-mvp-cards">
+            {weeklyMVP.topUploader && (
+              <div className="ranking-mvp-card">
+                <div className="ranking-mvp-icon">🔥</div>
+                <div className="ranking-mvp-label">최다 업로드</div>
+                <div className="ranking-mvp-value">{weeklyMVP.topUploader.name}</div>
+                <div className="ranking-mvp-sub">{weeklyMVP.topUploader.count}장</div>
+              </div>
+            )}
+            {weeklyMVP.bestPhoto && (
+              <div className="ranking-mvp-card clickable" onClick={() => onPhotoClick(weeklyMVP.bestPhoto)}>
+                <div className="ranking-mvp-icon">👑</div>
+                <div className="ranking-mvp-label">최고 점수</div>
+                <div className="ranking-mvp-value">{weeklyMVP.bestPhoto.uploaderName || '익명'}</div>
+                <div className="ranking-mvp-sub">{weeklyMVP.bestPhoto.totalScore}점</div>
+              </div>
+            )}
+            {weeklyMVP.bestAvgUser && (
+              <div className="ranking-mvp-card">
+                <div className="ranking-mvp-icon">📊</div>
+                <div className="ranking-mvp-label">최고 평균</div>
+                <div className="ranking-mvp-value">{weeklyMVP.bestAvgUser.name}</div>
+                <div className="ranking-mvp-sub">{weeklyMVP.bestAvgUser.avg.toFixed(1)}점 ({weeklyMVP.bestAvgUser.count}장)</div>
+              </div>
+            )}
+          </div>
+          <div className="ranking-mvp-week-total">이번주 {weeklyMVP.totalWeekPhotos}장 업로드</div>
+        </div>
+      )}
+
+      {/* 기간 필터 */}
+      <div className="ranking-period-filter">
+        {PERIODS.map(p => (
+          <button
+            key={p.key}
+            className={`ranking-period-btn ${period === p.key ? 'active' : ''}`}
+            onClick={() => setPeriod(p.key)}
+          >{p.label}</button>
+        ))}
+      </div>
+
       {/* 포디움 - Top 3 */}
       {top3.length >= 3 && (
         <div className="ranking-podium">
-          <div className="ranking-podium-title">AI 점수 TOP 3</div>
+          <div className="ranking-podium-title">
+            {period === 'all' ? 'AI 점수 TOP 3' : `${PERIODS.find(p => p.key === period)?.label} TOP 3`}
+          </div>
           <div className="ranking-podium-row">
             {/* 2위 */}
             <div className="ranking-podium-item second" onClick={() => onPhotoClick(top3[1])}>
@@ -194,8 +336,10 @@ export default function Ranking({ photos, onPhotoClick }) {
       {rankedPhotos.length === 0 && (
         <div className="ranking-empty">
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏆</div>
-          <p>아직 AI 평가된 사진이 없습니다</p>
-          <p style={{ fontSize: '12px', opacity: 0.5 }}>갤러리에 사진을 업로드하면 자동으로 평가됩니다</p>
+          <p>{period === 'all' ? '아직 AI 평가된 사진이 없습니다' : `${PERIODS.find(p => p.key === period)?.label} 업로드된 사진이 없습니다`}</p>
+          <p style={{ fontSize: '12px', opacity: 0.5 }}>
+            {period !== 'all' ? '다른 기간을 선택해보세요' : '갤러리에 사진을 업로드하면 자동으로 평가됩니다'}
+          </p>
         </div>
       )}
     </div>

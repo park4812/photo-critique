@@ -2992,6 +2992,25 @@ body {
 .stat-num { display: block; font-size: 20px; font-weight: 800; color: var(--accent); }
 .stat-label { font-size: 11px; color: var(--text-muted); }
 
+/* ===== Ranking Period Filter ===== */
+.ranking-period-filter { display: flex; justify-content: center; gap: 6px; margin-bottom: 20px; }
+.ranking-period-btn { padding: 6px 16px; border: 1px solid var(--border); border-radius: 20px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.ranking-period-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+.ranking-period-btn:hover:not(.active) { border-color: var(--text-muted); color: var(--text); }
+
+/* ===== Weekly MVP ===== */
+.ranking-mvp-section { margin-bottom: 24px; padding: 20px; background: linear-gradient(135deg, rgba(200,168,110,0.08), rgba(255,169,77,0.05)); border: 1px solid rgba(200,168,110,0.2); border-radius: 16px; }
+.ranking-mvp-title { font-size: 16px; font-weight: 800; color: var(--accent); text-align: center; margin-bottom: 16px; }
+.ranking-mvp-cards { display: flex; gap: 10px; justify-content: center; }
+.ranking-mvp-card { flex: 1; max-width: 160px; text-align: center; padding: 14px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; transition: transform 0.2s; }
+.ranking-mvp-card.clickable { cursor: pointer; }
+.ranking-mvp-card.clickable:hover { transform: translateY(-2px); }
+.ranking-mvp-icon { font-size: 24px; margin-bottom: 6px; }
+.ranking-mvp-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.ranking-mvp-value { font-size: 14px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-mvp-sub { font-size: 12px; color: var(--accent); font-weight: 600; margin-top: 2px; }
+.ranking-mvp-week-total { text-align: center; margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+
 /* ===== AI Coach ===== */
 .coach-tips { display: flex; flex-direction: column; gap: 10px; }
 .coach-overall { font-size: 14px; color: var(--text); padding: 12px; background: rgba(255,169,77,0.08); border: 1px solid rgba(255,169,77,0.2); border-radius: 8px; line-height: 1.5; }
@@ -3009,6 +3028,9 @@ body {
   .playground-card-icon { font-size: 32px; }
   .battle-arena { flex-direction: column; }
   .battle-vs { transform: rotate(90deg); }
+  .ranking-mvp-cards { flex-direction: column; align-items: center; }
+  .ranking-mvp-card { max-width: 100%; width: 100%; }
+  .ranking-period-filter { flex-wrap: wrap; }
   .achievements-grid { grid-template-columns: repeat(2, 1fr); }
   .achievements-stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
 }
