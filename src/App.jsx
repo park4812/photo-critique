@@ -349,8 +349,8 @@ function App() {
 
   const handleReEvaluate = async (photoId) => {
     if (!USE_FIREBASE) return;
-    const { reEvaluatePhoto } = await import('./services/firebaseService');
-    await reEvaluatePhoto(photoId);
+    const { debateEvaluatePhoto } = await import('./services/firebaseService');
+    await debateEvaluatePhoto(photoId);
   };
 
   const handleDebateEvaluate = async (photoId) => {
