@@ -322,7 +322,7 @@ async function callClaude(base64, apiKey, prompt) {
 async function callGPT(base64, apiKey, prompt) {
   const client = new OpenAI({ apiKey });
   const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4o-nano",
     max_tokens: 1500,
     messages: [{
       role: "user",
