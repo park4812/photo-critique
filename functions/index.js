@@ -322,7 +322,7 @@ async function callClaude(base64, apiKey, prompt) {
 async function callGPT(base64, apiKey, prompt) {
   const client = new OpenAI({ apiKey });
   const response = await client.chat.completions.create({
-    model: "gpt-4o-nano",
+    model: "gpt-4.1-nano",
     max_tokens: 1500,
     messages: [{
       role: "user",
@@ -656,47 +656,98 @@ exports.debateEvaluatePhoto = onCall(
 );
 
 // ============================================================
-// 8. Manual re-evaluate (single AI, callable)
+// 8. Manual re-evaluate (3-AI debate, same as debateEvaluatePhoto)
 // ============================================================
 exports.reEvaluatePhoto = onCall(
   {
     region: "asia-northeast1",
-    secrets: [anthropicKey],
-    memory: "512MiB",
-    timeoutSeconds: 120,
+    secrets: [anthropicKey, openaiKey, geminiKey],
+    memory: "1GiB",
+    timeoutSeconds: 300,
   },
   async (request) => {
     const { photoId } = request.data;
     if (!photoId) throw new HttpsError("invalid-argument", "photoId is required");
+
+    await db.doc(`photos/${photoId}`).update({
+      aiStatus: "processing",
+      debateStatus: "processing",
+      debateStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     try {
       const [files] = await bucket.getFiles({ prefix: `photos/${photoId}/original` });
       if (files.length === 0) throw new HttpsError("not-found", "Image not found");
 
       const base64 = await getResizedBase64(files[0].name);
-      const result = await callClaude(base64, anthropicKey.value(), EVAL_PROMPT);
+
+      // 장르 분류
+      const classification = await classifyPhoto(base64, geminiKey.value());
+      const genre = GENRE_CRITICS[classification.genre] || GENRE_CRITICS.general;
+      const critics = genre.critics;
+
+      // 3-AI 평가
+      const [claudeResult, gptResult, geminiResult] = await Promise.allSettled([
+        callClaude(base64, anthropicKey.value(), buildCriticPrompt(critics[0])),
+        callGPT(base64, openaiKey.value(), buildCriticPrompt(critics[1])),
+        callGemini(base64, geminiKey.value(), 2, buildCriticPrompt(critics[2])),
+      ]);
+
+      const evaluations = {
+        claude: claudeResult.status === "fulfilled" ? claudeResult.value : null,
+        gpt: gptResult.status === "fulfilled" ? gptResult.value : null,
+        gemini: geminiResult.status === "fulfilled" ? geminiResult.value : null,
+      };
+
+      const successfulEvals = Object.values(evaluations).filter(Boolean);
+      if (successfulEvals.length < 2) {
+        throw new Error("최소 2개 AI 응답 필요");
+      }
+
+      const filledEvaluations = {};
+      for (const [key, val] of Object.entries(evaluations)) {
+        filledEvaluations[key] = val || { scores: {}, critique: { summary: "(응답 실패)" } };
+      }
+
+      const consensusText = await callGeminiText(
+        geminiKey.value(),
+        buildConsensusPrompt(filledEvaluations, critics)
+      );
+      const debateResult = parseDebateResponse(consensusText);
+
+      const finalValues = Object.values(debateResult.finalScores);
+      const finalTotal = Math.round((finalValues.reduce((a, b) => a + b, 0) / finalValues.length) * 10) / 10;
 
       await db.doc(`photos/${photoId}`).update({
-        scores: result.scores,
-        totalScore: result.totalScore,
-        critique: result.critique,
-        references: result.references || [],
-        aiTags: result.aiTags || [],
-        category: (result.aiTags && result.aiTags[0]) || "미분류",
+        scores: debateResult.finalScores,
+        totalScore: finalTotal,
+        critique: debateResult.finalCritique,
+        references: debateResult.references || [],
+        aiTags: debateResult.aiTags || [],
+        category: (debateResult.aiTags && debateResult.aiTags[0]) || "미분류",
         aiEvaluated: true,
         aiEvaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        aiModel: "claude-haiku-4-5-20251001",
+        aiModel: "genre-expert-consensus",
         aiStatus: "done",
         aiError: admin.firestore.FieldValue.delete(),
+        photoType: classification.genre,
+        photoTypeKo: classification.genreKo || genre.nameKo,
+        photoTypeIcon: genre.icon,
+        photoSubType: classification.subGenre || "",
+        assignedCritics: critics.map(c => ({ id: c.id, nameKo: c.nameKo, icon: c.icon })),
+        individualEvaluations: evaluations,
+        debate: debateResult.discussion,
+        debateStatus: "done",
       });
 
-      return { success: true, totalScore: result.totalScore };
+      return { success: true, totalScore: finalTotal, photoType: classification.genre };
     } catch (error) {
       console.error(`Re-evaluate failed for ${photoId}:`, error);
       await db.doc(`photos/${photoId}`).update({
         aiEvaluated: false,
         aiError: error.message,
         aiStatus: "error",
+        debateStatus: "error",
       });
       throw new HttpsError("internal", error.message);
     }

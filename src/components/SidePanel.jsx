@@ -479,16 +479,10 @@ export default function SidePanel({ photo, isOpen, onClose, onAddComment, onReEv
             </div>
             {photo.aiEvaluated && !isPending && isAdmin && (
               <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
-                {onDebateEvaluate && !isDebateModel && photo.debateStatus !== 'processing' && (
-                  <button onClick={handleDebateEvaluate} disabled={debateLoading}
-                    style={{ padding: '4px 10px', fontSize: '11px', background: 'rgba(162, 155, 254, 0.15)', border: '1px solid rgba(162, 155, 254, 0.3)', borderRadius: '4px', color: '#a29bfe', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    {debateLoading ? '...' : '3-AI 토론'}
-                  </button>
-                )}
-                {onReEvaluate && (
+                {onReEvaluate && photo.debateStatus !== 'processing' && (
                   <button onClick={handleReEvaluate} disabled={reEvalLoading}
-                    style={{ padding: '4px 10px', fontSize: '11px', background: 'transparent', border: '1px solid var(--border-light)', borderRadius: '4px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                    {reEvalLoading ? '...' : '재평가'}
+                    style={{ padding: '4px 10px', fontSize: '11px', background: 'rgba(162, 155, 254, 0.15)', border: '1px solid rgba(162, 155, 254, 0.3)', borderRadius: '4px', color: '#a29bfe', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {reEvalLoading ? '...' : '3-AI 재평가'}
                   </button>
                 )}
               </div>
