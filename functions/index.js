@@ -35,9 +35,9 @@ const GENRE_CRITICS = {
   portrait: {
     nameKo: "인물", icon: "👤",
     critics: [
-      { id: "portrait_a", nameKo: "인물 전문가 A", icon: "👤" },
-      { id: "portrait_b", nameKo: "인물 전문가 B", icon: "👤" },
-      { id: "portrait_c", nameKo: "인물 전문가 C", icon: "👤" }
+      { id: "portrait_a", nameKo: "Claude", icon: "🟣" },
+      { id: "portrait_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "portrait_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 인물 사진 전문 크리틱입니다. 스튜디오/자연광 인물, 패션, 스냅, 환경인물 등 모든 인물 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -53,9 +53,9 @@ references에서는 인물 사진이 뛰어난 작가를 추천하세요.`
   landscape: {
     nameKo: "풍경", icon: "🏔️",
     critics: [
-      { id: "landscape_a", nameKo: "풍경 전문가 A", icon: "🏔️" },
-      { id: "landscape_b", nameKo: "풍경 전문가 B", icon: "🏔️" },
-      { id: "landscape_c", nameKo: "풍경 전문가 C", icon: "🏔️" }
+      { id: "landscape_a", nameKo: "Claude", icon: "🟣" },
+      { id: "landscape_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "landscape_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 풍경 사진 전문 크리틱입니다. 자연풍경, 도시풍경, 골든아워, 블루아워, 기상 현상 등 모든 풍경 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -71,9 +71,9 @@ references에서는 풍경 사진이 뛰어난 작가를 추천하세요.`
   street: {
     nameKo: "스트릿", icon: "🏙️",
     critics: [
-      { id: "street_a", nameKo: "스트릿 전문가 A", icon: "🏙️" },
-      { id: "street_b", nameKo: "스트릿 전문가 B", icon: "🏙️" },
-      { id: "street_c", nameKo: "스트릿 전문가 C", icon: "🏙️" }
+      { id: "street_a", nameKo: "Claude", icon: "🟣" },
+      { id: "street_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "street_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 스트릿 포토그래피 전문 크리틱입니다. 거리 스냅, 다큐멘터리, 도시 일상 등 모든 스트릿 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -89,9 +89,9 @@ references에서는 스트릿 사진이 뛰어난 작가를 추천하세요.`
   food: {
     nameKo: "음식", icon: "🍽️",
     critics: [
-      { id: "food_a", nameKo: "푸드 전문가 A", icon: "🍽️" },
-      { id: "food_b", nameKo: "푸드 전문가 B", icon: "🍽️" },
-      { id: "food_c", nameKo: "푸드 전문가 C", icon: "🍽️" }
+      { id: "food_a", nameKo: "Claude", icon: "🟣" },
+      { id: "food_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "food_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 푸드 포토그래피 전문 크리틱입니다. 매거진, 레스토랑, SNS 음식 촬영 등 모든 푸드 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -107,9 +107,9 @@ references에서는 푸드 사진이 뛰어난 작가를 추천하세요.`
   architecture: {
     nameKo: "건축", icon: "🏛️",
     critics: [
-      { id: "arch_a", nameKo: "건축 전문가 A", icon: "🏛️" },
-      { id: "arch_b", nameKo: "건축 전문가 B", icon: "🏛️" },
-      { id: "arch_c", nameKo: "건축 전문가 C", icon: "🏛️" }
+      { id: "arch_a", nameKo: "Claude", icon: "🟣" },
+      { id: "arch_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "arch_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 건축 사진 전문 크리틱입니다. 현대건축, 전통건축, 인테리어, 도시경관 등 모든 건축 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -125,9 +125,9 @@ references에서는 건축 사진이 뛰어난 작가를 추천하세요.`
   animal: {
     nameKo: "동물", icon: "🐾",
     critics: [
-      { id: "animal_a", nameKo: "동물 전문가 A", icon: "🐾" },
-      { id: "animal_b", nameKo: "동물 전문가 B", icon: "🐾" },
-      { id: "animal_c", nameKo: "동물 전문가 C", icon: "🐾" }
+      { id: "animal_a", nameKo: "Claude", icon: "🟣" },
+      { id: "animal_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "animal_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 동물/야생 사진 전문 크리틱입니다. 반려동물, 야생동물, 조류, 수중생물 등 모든 동물 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -143,9 +143,9 @@ references에서는 동물 사진이 뛰어난 작가를 추천하세요.`
   night: {
     nameKo: "야경", icon: "🌃",
     critics: [
-      { id: "night_a", nameKo: "야경 전문가 A", icon: "🌃" },
-      { id: "night_b", nameKo: "야경 전문가 B", icon: "🌃" },
-      { id: "night_c", nameKo: "야경 전문가 C", icon: "🌃" }
+      { id: "night_a", nameKo: "Claude", icon: "🟣" },
+      { id: "night_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "night_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 야경/야간 촬영 전문 크리틱입니다. 도시 야경, 장노출, 별사진, 네온 등 모든 야간 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -161,9 +161,9 @@ references에서는 야경 사진이 뛰어난 작가를 추천하세요.`
   concert: {
     nameKo: "공연", icon: "🎤",
     critics: [
-      { id: "concert_a", nameKo: "공연 전문가 A", icon: "🎤" },
-      { id: "concert_b", nameKo: "공연 전문가 B", icon: "🎤" },
-      { id: "concert_c", nameKo: "공연 전문가 C", icon: "🎤" }
+      { id: "concert_a", nameKo: "Claude", icon: "🟣" },
+      { id: "concert_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "concert_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 공연/라이브 포토그래피 전문 크리틱입니다. 콘서트, 페스티벌, 연극, 뮤지컬 등 모든 공연 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -179,9 +179,9 @@ references에서는 공연 사진이 뛰어난 작가를 추천하세요.`
   sports: {
     nameKo: "스포츠", icon: "⚽",
     critics: [
-      { id: "sports_a", nameKo: "스포츠 전문가 A", icon: "⚽" },
-      { id: "sports_b", nameKo: "스포츠 전문가 B", icon: "⚽" },
-      { id: "sports_c", nameKo: "스포츠 전문가 C", icon: "⚽" }
+      { id: "sports_a", nameKo: "Claude", icon: "🟣" },
+      { id: "sports_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "sports_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 스포츠 포토그래피 전문 크리틱입니다. 축구, 야구, 농구, 육상, 수영 등 모든 스포츠 촬영에 정통합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
@@ -197,9 +197,9 @@ references에서는 스포츠 사진이 뛰어난 작가를 추천하세요.`
   general: {
     nameKo: "일반", icon: "📷",
     critics: [
-      { id: "general_a", nameKo: "사진 전문가 A", icon: "📷" },
-      { id: "general_b", nameKo: "사진 전문가 B", icon: "📷" },
-      { id: "general_c", nameKo: "사진 전문가 C", icon: "📷" }
+      { id: "general_a", nameKo: "Claude", icon: "🟣" },
+      { id: "general_b", nameKo: "GPT-4", icon: "🟢" },
+      { id: "general_c", nameKo: "Gemini", icon: "🔵" }
     ],
     prompt: `당신은 사진 전문 크리틱입니다. 다양한 장르의 사진 평가 경력이 풍부합니다.
 모든 평가 항목을 균형 있게, 편향 없이 평가하세요:
