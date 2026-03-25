@@ -276,13 +276,37 @@ function buildCriticPrompt(genre) {
   return genre.prompt + "\n" + EVAL_PROMPT;
 }
 
-function buildConsensusPrompt(evaluations, critics) {
+// 기존 태그 목록을 Firestore에서 수집
+async function getExistingTags() {
+  try {
+    const snapshot = await db.collection("photos")
+      .where("aiTags", "!=", [])
+      .select("aiTags")
+      .limit(200)
+      .get();
+    const tagSet = new Set();
+    snapshot.forEach(doc => {
+      const tags = doc.data().aiTags;
+      if (Array.isArray(tags)) tags.forEach(t => tagSet.add(t));
+    });
+    return [...tagSet].sort();
+  } catch (e) {
+    console.log("기존 태그 수집 실패:", e.message);
+    return [];
+  }
+}
+
+function buildConsensusPrompt(evaluations, critics, existingTags) {
   const criticNames = critics.map(c => c.nameKo);
   let evalText = "";
   const keys = ["claude", "gpt", "gemini"];
   for (let i = 0; i < keys.length; i++) {
     evalText += `\n=== ${criticNames[i]} (${critics[i].icon}) 평가 ===\n${JSON.stringify(evaluations[keys[i]], null, 2)}\n`;
   }
+
+  const tagInstruction = existingTags.length > 0
+    ? `\n[기존 태그 목록]\n${existingTags.join(", ")}\n\naiTags 선택 규칙:\n1. 위 기존 태그 중 이 사진에 맞는 것이 있으면 반드시 그것을 사용하세요.\n2. 기존 태그에 적합한 것이 없을 때만 새 태그를 만드세요.\n3. 최종 2~4개 선택. 유사어 금지.`
+    : `aiTags: 유사어 금지, 서로 다른 카테고리에서 2~4개 선택.`;
 
   return `당신은 사진 평가 합의 진행자입니다.
 
@@ -316,7 +340,7 @@ ${evalText}
 토론은 3~6개 메시지로, 점수 차이가 큰 항목 위주로 논의하세요.
 각 전문가는 자기 원래 평가 근거를 설명하고, 다른 의견에 동의/반박합니다.
 최종 점수는 단순 평균이 아닌 토론 합의 점수여야 합니다.
-aiTags: 유사어 금지, 서로 다른 카테고리에서 2~4개 선택.`;
+${tagInstruction}`;
 }
 
 // ============================================================
@@ -533,9 +557,10 @@ exports.autoEvaluatePhoto = onObjectFinalized(
         filledEvaluations[key] = val || { scores: {}, critique: { summary: "(응답 실패)" } };
       }
 
+      const existingTags = await getExistingTags();
       const consensusText = await callGeminiText(
         geminiKey.value(),
-        buildConsensusPrompt(filledEvaluations, critics)
+        buildConsensusPrompt(filledEvaluations, critics, existingTags)
       );
       const debateResult = parseDebateResponse(consensusText);
 
@@ -632,9 +657,10 @@ exports.debateEvaluatePhoto = onCall(
         filledEvaluations[key] = val || { scores: {}, critique: { summary: "(응답 실패)" } };
       }
 
+      const existingTags = await getExistingTags();
       const consensusText = await callGeminiText(
         geminiKey.value(),
-        buildConsensusPrompt(filledEvaluations, critics)
+        buildConsensusPrompt(filledEvaluations, critics, existingTags)
       );
       const debateResult = parseDebateResponse(consensusText);
 
@@ -728,9 +754,10 @@ exports.reEvaluatePhoto = onCall(
         filledEvaluations[key] = val || { scores: {}, critique: { summary: "(응답 실패)" } };
       }
 
+      const existingTags = await getExistingTags();
       const consensusText = await callGeminiText(
         geminiKey.value(),
-        buildConsensusPrompt(filledEvaluations, critics)
+        buildConsensusPrompt(filledEvaluations, critics, existingTags)
       );
       const debateResult = parseDebateResponse(consensusText);
 
