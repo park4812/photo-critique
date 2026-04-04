@@ -126,7 +126,7 @@ function DebateView({ debate, individualEvaluations }) {
       )}
 
       {/* Debate Transcript */}
-      {debate && debate.length > 0 && (
+      {Array.isArray(debate) && debate.length > 0 && (
         <div className="debate-transcript">
           <div className="section-title">AI 토론 과정</div>
           <div className="debate-messages">
