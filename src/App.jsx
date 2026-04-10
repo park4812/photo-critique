@@ -14,6 +14,7 @@ import ContestList from './components/ContestList';
 import ContestDetail from './components/ContestDetail';
 import Ranking from './components/Ranking';
 import Playground from './components/Playground';
+import Curate from './components/Curate';
 import './App.css';
 
 // Firebase is configured
@@ -43,6 +44,7 @@ function App() {
     if (hash.startsWith('contests')) return 'contests';
     if (hash === 'ranking') return 'ranking';
     if (hash === 'playground') return 'playground';
+    if (hash === 'curate') return 'curate';
     return 'gallery';
   };
   const getInitialAlbumId = () => {
@@ -77,6 +79,7 @@ function App() {
     else if (activeView === 'contests') newHash = '#contests';
     else if (activeView === 'ranking') newHash = '#ranking';
     else if (activeView === 'playground') newHash = '#playground';
+    else if (activeView === 'curate') newHash = '#curate';
     else newHash = '#gallery';
     if (window.location.hash !== newHash) {
       window.history.replaceState(null, '', newHash);
@@ -616,6 +619,14 @@ function App() {
 
       {activeView === 'playground' && (
         <Playground
+          photos={photos}
+          onPhotoClick={handlePhotoClick}
+          currentUser={currentUser}
+        />
+      )}
+
+      {activeView === 'curate' && (
+        <Curate
           photos={photos}
           onPhotoClick={handlePhotoClick}
           currentUser={currentUser}
