@@ -662,10 +662,25 @@ exports.autoEvaluatePhoto = onObjectFinalized(
       }
 
       const hybridScores = computeHybridScores(evaluations, debateResult.finalScores || {});
-      const hybridValues = Object.values(hybridScores);
-      let finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
-
-      // v35: Tier bonus removed - was inflating scores above AI debate results
+      // v36: Use median of 3 AI total scores instead of category average
+      const aiTotals = [];
+      for (const ai of ["claude", "gpt", "gemini"]) {
+        if (evaluations[ai] && typeof evaluations[ai].totalScore === "number") {
+          aiTotals.push(evaluations[ai].totalScore);
+        }
+      }
+      aiTotals.sort((a, b) => a - b);
+      let finalTotal;
+      if (aiTotals.length >= 3) {
+        finalTotal = Math.round(aiTotals[1] * 10) / 10;
+      } else if (aiTotals.length === 2) {
+        finalTotal = Math.round(((aiTotals[0] + aiTotals[1]) / 2) * 10) / 10;
+      } else if (aiTotals.length === 1) {
+        finalTotal = Math.round(aiTotals[0] * 10) / 10;
+      } else {
+        const hybridValues = Object.values(hybridScores);
+        finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
+      }
 
       // Apply defect penalty
       const { penalty, upperLimit } = computeDefectPenalty(evaluations);
@@ -799,10 +814,25 @@ exports.debateEvaluatePhoto = onCall(
       }
 
       const hybridScores = computeHybridScores(evaluations, debateResult.finalScores || {});
-      const hybridValues = Object.values(hybridScores);
-      let finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
-
-      // v35: Tier bonus removed - was inflating scores above AI debate results
+      // v36: Use median of 3 AI total scores instead of category average
+      const aiTotals = [];
+      for (const ai of ["claude", "gpt", "gemini"]) {
+        if (evaluations[ai] && typeof evaluations[ai].totalScore === "number") {
+          aiTotals.push(evaluations[ai].totalScore);
+        }
+      }
+      aiTotals.sort((a, b) => a - b);
+      let finalTotal;
+      if (aiTotals.length >= 3) {
+        finalTotal = Math.round(aiTotals[1] * 10) / 10;
+      } else if (aiTotals.length === 2) {
+        finalTotal = Math.round(((aiTotals[0] + aiTotals[1]) / 2) * 10) / 10;
+      } else if (aiTotals.length === 1) {
+        finalTotal = Math.round(aiTotals[0] * 10) / 10;
+      } else {
+        const hybridValues = Object.values(hybridScores);
+        finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
+      }
 
       // Apply defect penalty
       const { penalty, upperLimit } = computeDefectPenalty(evaluations);
@@ -932,10 +962,25 @@ exports.reEvaluatePhoto = onCall(
       }
 
       const hybridScores = computeHybridScores(evaluations, debateResult.finalScores || {});
-      const hybridValues = Object.values(hybridScores);
-      let finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
-
-      // v35: Tier bonus removed - was inflating scores above AI debate results
+      // v36: Use median of 3 AI total scores instead of category average
+      const aiTotals = [];
+      for (const ai of ["claude", "gpt", "gemini"]) {
+        if (evaluations[ai] && typeof evaluations[ai].totalScore === "number") {
+          aiTotals.push(evaluations[ai].totalScore);
+        }
+      }
+      aiTotals.sort((a, b) => a - b);
+      let finalTotal;
+      if (aiTotals.length >= 3) {
+        finalTotal = Math.round(aiTotals[1] * 10) / 10;
+      } else if (aiTotals.length === 2) {
+        finalTotal = Math.round(((aiTotals[0] + aiTotals[1]) / 2) * 10) / 10;
+      } else if (aiTotals.length === 1) {
+        finalTotal = Math.round(aiTotals[0] * 10) / 10;
+      } else {
+        const hybridValues = Object.values(hybridScores);
+        finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
+      }
 
       // Apply defect penalty
       const { penalty, upperLimit } = computeDefectPenalty(evaluations);
