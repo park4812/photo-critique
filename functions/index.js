@@ -665,10 +665,7 @@ exports.autoEvaluatePhoto = onObjectFinalized(
       const hybridValues = Object.values(hybridScores);
       let finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
 
-      // v33: Tier bonus - reward photos with consistently high scores across categories
-      const highCats = hybridValues.filter(v => v >= 9.0).length;
-      const tierBonus = highCats >= 5 ? 0.4 : highCats >= 4 ? 0.2 : 0;
-      if (tierBonus > 0) { finalTotal = Math.round(Math.min(10.0, finalTotal + tierBonus) * 10) / 10; }
+      // v35: Tier bonus removed - was inflating scores above AI debate results
 
       // Apply defect penalty
       const { penalty, upperLimit } = computeDefectPenalty(evaluations);
@@ -694,14 +691,7 @@ exports.autoEvaluatePhoto = onObjectFinalized(
       }
       console.log(`[Scoring] ${photoId}: final=${finalTotal} penalty=${penalty} upperLimit=${upperLimit} imgQCap=${imgQCap}`);
 
-      // v33: Proportional scaling - adjust category scores so their average matches finalTotal
-      const rawAvg = hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length;
-      if (rawAvg > 0 && Math.abs(rawAvg - finalTotal) > 0.05) {
-        const scaleFactor = finalTotal / rawAvg;
-        for (const key of Object.keys(hybridScores)) {
-          hybridScores[key] = Math.round(Math.max(1.0, Math.min(10.0, hybridScores[key] * scaleFactor)) * 10) / 10;
-        }
-      }
+      // v35: Proportional scaling removed - was distorting individual category scores
 
       await db.doc(`photos/${photoId}`).update({
         scores: hybridScores,
@@ -812,10 +802,7 @@ exports.debateEvaluatePhoto = onCall(
       const hybridValues = Object.values(hybridScores);
       let finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
 
-      // v33: Tier bonus - reward photos with consistently high scores across categories
-      const highCats = hybridValues.filter(v => v >= 9.0).length;
-      const tierBonus = highCats >= 5 ? 0.4 : highCats >= 4 ? 0.2 : 0;
-      if (tierBonus > 0) { finalTotal = Math.round(Math.min(10.0, finalTotal + tierBonus) * 10) / 10; }
+      // v35: Tier bonus removed - was inflating scores above AI debate results
 
       // Apply defect penalty
       const { penalty, upperLimit } = computeDefectPenalty(evaluations);
@@ -840,14 +827,7 @@ exports.debateEvaluatePhoto = onCall(
       }
       console.log(`[Scoring] ${photoId}: final=${finalTotal} penalty=${penalty} upperLimit=${upperLimit} imgQCap=${imgQCap}`);
 
-      // v33: Proportional scaling - adjust category scores so their average matches finalTotal
-      const rawAvg = hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length;
-      if (rawAvg > 0 && Math.abs(rawAvg - finalTotal) > 0.05) {
-        const scaleFactor = finalTotal / rawAvg;
-        for (const key of Object.keys(hybridScores)) {
-          hybridScores[key] = Math.round(Math.max(1.0, Math.min(10.0, hybridScores[key] * scaleFactor)) * 10) / 10;
-        }
-      }
+      // v35: Proportional scaling removed - was distorting individual category scores
 
       await db.doc(`photos/${photoId}`).update({
         scores: hybridScores,
@@ -955,10 +935,7 @@ exports.reEvaluatePhoto = onCall(
       const hybridValues = Object.values(hybridScores);
       let finalTotal = Math.round((hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length) * 10) / 10;
 
-      // v33: Tier bonus - reward photos with consistently high scores across categories
-      const highCats = hybridValues.filter(v => v >= 9.0).length;
-      const tierBonus = highCats >= 5 ? 0.4 : highCats >= 4 ? 0.2 : 0;
-      if (tierBonus > 0) { finalTotal = Math.round(Math.min(10.0, finalTotal + tierBonus) * 10) / 10; }
+      // v35: Tier bonus removed - was inflating scores above AI debate results
 
       // Apply defect penalty
       const { penalty, upperLimit } = computeDefectPenalty(evaluations);
@@ -983,14 +960,7 @@ exports.reEvaluatePhoto = onCall(
       }
       console.log(`[Scoring] ${photoId}: final=${finalTotal} penalty=${penalty} upperLimit=${upperLimit} imgQCap=${imgQCap}`);
 
-      // v33: Proportional scaling - adjust category scores so their average matches finalTotal
-      const rawAvg = hybridValues.reduce((a, b) => a + b, 0) / hybridValues.length;
-      if (rawAvg > 0 && Math.abs(rawAvg - finalTotal) > 0.05) {
-        const scaleFactor = finalTotal / rawAvg;
-        for (const key of Object.keys(hybridScores)) {
-          hybridScores[key] = Math.round(Math.max(1.0, Math.min(10.0, hybridScores[key] * scaleFactor)) * 10) / 10;
-        }
-      }
+      // v35: Proportional scaling removed - was distorting individual category scores
 
       await db.doc(`photos/${photoId}`).set({
         scores: hybridScores,
@@ -1254,21 +1224,10 @@ function buildFallbackDebateResult(evaluations) {
 }
 
 // Hybrid scoring: median of individual AI scores (more reliable than consensus alone)
-// Score amplification: AI models compress scores into narrow 6-8 range.
-// v34: Mild amplification - preserves AI scores naturally while slightly expanding range
-// Old v33 curve was too aggressive (8.5→9.7), causing all categories to cluster at 9.5+
-// New curve: gentle expansion that keeps scores recognizable
-// Maps: 4→4.5, 5→5.5, 6→6.5, 7→7.5, 8→8.5, 9→9.3
+// v35: Identity function - no amplification, display AI debate scores as-is
+// Previous versions (v33, v34) inflated scores causing mismatch with AI debate results
 function amplifyScore(raw) {
-  const map = [[0,0],[2,2],[3,3],[4,4.5],[5,5.5],[6,6.5],[7,7.5],[8,8.5],[9,9.3],[10,10]];
-  for (let i = 1; i < map.length; i++) {
-    if (raw <= map[i][0]) {
-      const [x0,y0] = map[i-1];
-      const [x1,y1] = map[i];
-      return Math.round(Math.max(1.0, Math.min(10.0, y0 + (raw-x0)/(x1-x0)*(y1-y0))) * 10) / 10;
-    }
-  }
-  return 10.0;
+  return Math.round(Math.max(1.0, Math.min(10.0, raw)) * 10) / 10;
 }
 
 // Use defectCount and scoreUpperLimit from AI evaluations to penalize bad photos
